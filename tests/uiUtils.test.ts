@@ -5,6 +5,9 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import { detectPlatform } from '../packages/ui/src/platform.ts';
 import { popoverPosition } from '../packages/ui/src/utils/popoverPosition.ts';
+import { cn } from '../packages/ui/src/utils/cn.ts';
+import { isTextEntryTarget } from '../packages/ui/src/shortcuts.ts';
+import { themeToken } from '../packages/ui/src/themeColors.ts';
 
 describe('detectPlatform', () => {
     test('reads the client hints, platform and user agent', () => {
@@ -100,5 +103,30 @@ describe('popoverPosition', () => {
         await settle();
         expect(node.getAttribute('data-placement')).toBeNull();
         action.destroy();
+    });
+});
+
+describe('cn', () => {
+    test('flattens arrays and keeps the truthy keys of objects', () => {
+        expect(cn('a', ['b', ['c', null]], { d: true, 'e f': 1, g: false }, 0, 7)).toBe(
+            'a b c d e f 7'
+        );
+    });
+});
+
+describe('isTextEntryTarget', () => {
+    test('reads plain objects that have no closest()', () => {
+        expect(isTextEntryTarget({ tagName: 'INPUT' })).toBe(true);
+        expect(isTextEntryTarget({ tagName: 'INPUT', type: 'checkbox' })).toBe(false);
+        expect(isTextEntryTarget({ tagName: 'SELECT' })).toBe(true);
+        expect(isTextEntryTarget({ tagName: 'DIV', isContentEditable: true })).toBe(true);
+        expect(isTextEntryTarget({})).toBe(false);
+    });
+});
+
+describe('themeToken', () => {
+    test('follows token references and fails loudly on unknown colors', () => {
+        expect(themeToken('--color-calendar-4', 'dark')).toBe(themeToken('--color-accent', 'dark'));
+        expect(() => themeToken('--color-does-not-exist')).toThrow('Missing an opaque');
     });
 });

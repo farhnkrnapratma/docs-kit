@@ -61,12 +61,3 @@ export function themeToken(name: string, theme: EffectiveTheme = 'light'): strin
 function missing(name: string, theme: EffectiveTheme): never {
     throw new Error(`Missing an opaque ${name} color for ${selectors[theme]}`);
 }
-
-const backgrounds = {
-    light: themeToken('--color-canvas', 'light'),
-    dark: themeToken('--color-canvas', 'dark')
-};
-
-export function themeColors(theme: EffectiveTheme = 'light') {
-    return { theme_color: backgrounds[theme], background_color: backgrounds[theme] };
-}

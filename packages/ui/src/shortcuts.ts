@@ -111,11 +111,6 @@ export function argKey<C extends ArgCommand>(
     return COMMAND_ARG_KEYS[command][arg] as string;
 }
 
-export function sectionCommandKey(target: string): string {
-    const section = target === '/' ? 'home' : target.replace(/^\/?#?/, '').split(/[/?#]/)[0];
-    return COMMAND_SHORTCUTS[`/${section || 'home'}`] ?? '';
-}
-
 /**
  * One binding per slash command, pressed after the leader. Arrow keys move,
  * G then a letter goes to a page, single letters act on the current page,

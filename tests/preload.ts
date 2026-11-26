@@ -39,9 +39,7 @@ const redirects: Record<string, string> = {
     svelte: 'svelte/src/index-client.js',
     'svelte/legacy': 'svelte/src/legacy/legacy-client.js',
     'svelte/reactivity': 'svelte/src/reactivity/index-client.js',
-    'svelte/store': 'svelte/src/store/index-client.js',
-    '@blobatar/svelte': '@blobatar/svelte/src/index.js',
-    '@blobatar/svelte/gaze': '@blobatar/svelte/src/gaze.js'
+    'svelte/store': 'svelte/src/store/index-client.js'
 };
 
 Bun.plugin({

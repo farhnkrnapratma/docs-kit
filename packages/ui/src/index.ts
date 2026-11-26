@@ -28,6 +28,5 @@ export * from './utils/focusScope';
 export * from './utils/frameScheduler';
 export * from './utils/menuItemStyles';
 export * from './utils/popoverPosition';
-export * from './utils/scroll';
 export * from './utils/shortcut.svelte';
 export type { Theme, FormFieldContext, ImageSource } from './types';

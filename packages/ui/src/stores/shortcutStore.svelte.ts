@@ -169,11 +169,8 @@ function matchEntry(key: string): ShortcutEntry | undefined {
     return pool.find(isVisible) ?? pool[0];
 }
 
-function matchEntryInForm(key: string, target: EventTarget | null): ShortcutEntry | undefined {
-    const form =
-        target instanceof Element
-            ? (target.closest('form') ?? target.closest('[data-shortcut-scope]'))
-            : null;
+function matchEntryInForm(key: string, target: Element): ShortcutEntry | undefined {
+    const form = target.closest('form') ?? target.closest('[data-shortcut-scope]');
     if (!form) return undefined;
     return [...entries.values()].find(
         entry =>
@@ -206,7 +203,7 @@ function handleKeydown(e: KeyboardEvent) {
         hasGroupMembers: groupHasMembers,
         hasEntryFor: key => Boolean(matchEntry(key)),
         hasScopedEntryFor: key => activeScope !== 'page' && matchEntry(key)?.scope === activeScope,
-        hasEntryInForm: (key, target) => Boolean(matchEntryInForm(key, target)),
+        hasEntryInForm: (key, target) => Boolean(matchEntryInForm(key, target as Element)),
         modalActive,
         hasCommandFor: key => commands.has(key)
     });
@@ -239,7 +236,7 @@ function handleKeydown(e: KeyboardEvent) {
             disarm();
             if (!action.key) return;
             const match = action.inForm
-                ? matchEntryInForm(action.key, e.target)
+                ? matchEntryInForm(action.key, e.target as Element)
                 : matchEntry(action.key);
             if (match) trigger(match);
             return;

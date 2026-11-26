@@ -251,6 +251,34 @@ describe('shortcutStore chord groups', () => {
     });
 });
 
+describe('shortcutStore edge cases', () => {
+    test('orders two members on one element by registration and checks layout without checkVisibility', () => {
+        const shared = document.createElement('button');
+        document.body.append(shared);
+        Object.defineProperty(shared, 'checkVisibility', { value: undefined });
+        (shared as unknown as { getClientRects: () => unknown[] }).getClientRects = () => [{}];
+        const first = add({
+            combos: [],
+            group: 'posts',
+            label: 'a',
+            scope: 'page',
+            element: shared
+        });
+        const second = add({
+            combos: [],
+            group: 'posts',
+            label: 'b',
+            scope: 'page',
+            element: shared
+        });
+        leader();
+        press('KeyB', { shiftKey: true });
+        expect(shortcutStore.hintFor(first)).toEqual(['0']);
+        expect(shortcutStore.hintFor(second)).toEqual(['1']);
+        press('Escape', { key: 'Escape' });
+    });
+});
+
 describe('shortcutStore commands and scopes', () => {
     test('runs registered commands, including chorded command keys', () => {
         const ran: string[] = [];

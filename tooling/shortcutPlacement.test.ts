@@ -147,3 +147,60 @@ test('badge in a clipping container is penalised by the clipped area', () => {
         }
     );
 });
+
+function withViewport(width: number, height: number, run: () => void) {
+    const root = document.documentElement;
+    Object.defineProperty(root, 'clientWidth', { configurable: true, value: width });
+    Object.defineProperty(root, 'clientHeight', { configurable: true, value: height });
+    try {
+        run();
+    } finally {
+        delete (root as unknown as Record<string, unknown>).clientWidth;
+        delete (root as unknown as Record<string, unknown>).clientHeight;
+    }
+}
+
+test('a wide host tries the end positions first and weighs text under the badge', () => {
+    const host = document.createElement('div');
+    const label = document.createElement('span');
+    label.textContent = 'Visible label';
+    host.append(label);
+    document.body.append(host);
+    Object.defineProperty(host, 'offsetWidth', { configurable: true, value: 200 });
+    const text = label.firstChild as Node;
+    let rangeChecks = 0;
+    withViewport(1000, 800, () =>
+        withLayout(
+            {
+                rect: element => (element === host ? rect(0, 0, 200, 40) : rect(150, 0, 40, 20)),
+                caret: () => ({ offsetNode: text }),
+                clientRects: () => {
+                    rangeChecks += 1;
+                    return [rect(0, 0, 200, 40)];
+                }
+            },
+            () => {
+                shortcutWithAlt(host, { combo: 'a', label: 'Open' } as never);
+                expect(host.querySelector('[data-shortcut-hint]')).not.toBeNull();
+            }
+        )
+    );
+    expect(rangeChecks).toBeGreaterThan(0);
+});
+
+test('a shortcut without a label is named after the element', async () => {
+    const { shortcutStore } = await import('../packages/ui/src/stores/shortcutStore.svelte.ts');
+    const named = (setup: (node: HTMLElement) => void) => {
+        const node = document.createElement('button');
+        setup(node);
+        document.body.append(node);
+        const handle = shortcut(node, { combo: 'Shift+Q' });
+        const labels = shortcutStore.catalogEntries().map(entry => entry.label);
+        handle.destroy();
+        return labels;
+    };
+    expect(named(node => node.setAttribute('aria-label', 'Close'))).toContain('Close');
+    expect(named(node => node.setAttribute('title', 'Help'))).toContain('Help');
+    expect(named(node => (node.textContent = '  Save draft  '))).toContain('Save draft');
+    expect(named(() => {})).toContain('Action');
+});
