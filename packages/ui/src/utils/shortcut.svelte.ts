@@ -56,7 +56,7 @@ function candidatesFor(placement: keyof typeof HINT_PLACEMENT, narrow: boolean):
 }
 
 function textAt(x: number, y: number) {
-    const node = document.caretPositionFromPoint(x, y)?.offsetNode;
+    const node = document.caretPositionFromPoint?.(x, y)?.offsetNode;
     if (node?.nodeType !== Node.TEXT_NODE || !node.textContent?.trim()) return false;
     const range = document.createRange();
     range.selectNodeContents(node);
