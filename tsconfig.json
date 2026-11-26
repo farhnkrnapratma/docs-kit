@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "target": "esnext",
+        "module": "esnext",
+        "lib": ["ESNext", "DOM", "DOM.Iterable"],
+        "types": ["bun", "vite/client"],
+        "strict": true,
+        "skipLibCheck": true,
+        "allowArbitraryExtensions": true,
+        "moduleResolution": "bundler",
+        "allowImportingTsExtensions": true,
+        "verbatimModuleSyntax": true,
+        "moduleDetection": "force",
+        "noEmit": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "erasableSyntaxOnly": true,
+        "noFallthroughCasesInSwitch": true
+    },
+    "include": ["packages/*/src", "tests", "tooling", "*.ts"]
+}

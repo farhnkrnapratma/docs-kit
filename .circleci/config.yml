@@ -1,0 +1,161 @@
+# SPDX-FileCopyrightText: 2026 Farhan Kurnia Pratama
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+version: 2.1
+
+executors:
+    node:
+        docker:
+            - image: cimg/node:24.22
+        resource_class: medium
+    node-large:
+        docker:
+            - image: cimg/node:24.22
+        resource_class: large
+
+commands:
+    setup-bun:
+        steps:
+            - run:
+                  name: Install bun
+                  command: |
+                      curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.5"
+                      ln -sf "$HOME/.bun/bin/bun" "$HOME/.bun/bin/bunx"
+                      echo 'export PATH="$HOME/.bun/bin:$PATH"' >> "$BASH_ENV"
+
+    setup-trufflehog:
+        steps:
+            - run:
+                  name: Install trufflehog
+                  command: |
+                      base=https://github.com/trufflesecurity/trufflehog/releases/download/v3.99.8
+                      curl -fsSL -o "$HOME/trufflehog.tar.gz" "$base/trufflehog_3.99.8_linux_amd64.tar.gz"
+                      curl -fsSL -o "$HOME/trufflehog.sums" "$base/trufflehog_3.99.8_checksums.txt"
+                      (cd "$HOME" && grep ' trufflehog_3.99.8_linux_amd64.tar.gz$' trufflehog.sums | awk '{print $1"  trufflehog.tar.gz"}' | sha256sum -c -)
+                      mkdir -p "$HOME/.local/bin"
+                      tar -xzf "$HOME/trufflehog.tar.gz" -C "$HOME/.local/bin" trufflehog
+                      echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
+
+jobs:
+    reuse:
+        docker:
+            - image: cimg/python:3.12
+        steps:
+            - checkout
+            - run: pip install --quiet reuse==6.3.0
+            - run: reuse lint
+
+    check:
+        executor: node-large
+        steps:
+            - checkout
+            - setup-bun
+            - restore_cache:
+                  keys:
+                      - bun-v1-{{ checksum "bun.lock" }}
+                      - bun-v1-
+            - run: bun install --frozen-lockfile
+            - save_cache:
+                  key: bun-v1-{{ checksum "bun.lock" }}
+                  paths:
+                      - ~/.bun/install/cache
+            - run: bunx biome ci
+            - run: bun run typecheck
+            - run: bun run test
+            - run: bun audit --audit-level=high
+
+    coverage:
+        executor: node-large
+        steps:
+            - checkout
+            - setup-bun
+            - restore_cache:
+                  keys:
+                      - bun-v1-{{ checksum "bun.lock" }}
+                      - bun-v1-
+            - run: bun install --frozen-lockfile
+            - run: bun run coverage
+            - run:
+                  name: Upload coverage to Codecov
+                  command: |
+                      if [ -z "${CODECOV_TOKEN:-}" ]; then echo "CODECOV_TOKEN is not set; skipping the upload."; exit 0; fi
+                      curl -fsSL -o codecov https://cli.codecov.io/v11.3.2/linux/codecov
+                      echo "8e1bfb71661378530f6ea21e82b414095899e565cbb4cf555c613064be17b973  codecov" | sha256sum -c -
+                      chmod +x codecov
+                      ./codecov upload-process --fail-on-error --disable-search --git-service github \
+                          --slug farhnkrnapratma/docs-kit --file coverage/lcov.info
+
+    secrets:
+        docker:
+            - image: cimg/python:3.12
+        steps:
+            - setup-trufflehog
+            # CircleCI checks out a blobless clone, so trufflehog scans a full clone instead
+            - run:
+                  name: Scan history
+                  command: |
+                      git clone --quiet "https://github.com/farhnkrnapratma/docs-kit.git" "$HOME/scan"
+                      trufflehog git "file://$HOME/scan" --results=verified --fail --no-update
+
+    commitlint:
+        executor: node
+        steps:
+            - checkout
+            - setup-bun
+            - restore_cache:
+                  keys:
+                      - bun-v1-{{ checksum "bun.lock" }}
+                      - bun-v1-
+            - run: bun install --frozen-lockfile
+            - run:
+                  name: Lint commit messages
+                  command: |
+                      if [ "$(git rev-parse --is-shallow-repository)" = true ]; then git fetch --unshallow; fi
+                      git fetch --quiet origin main:refs/remotes/origin/main
+                      if [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ]; then
+                          bunx --no-install commitlint --last
+                      else
+                          bunx --no-install commitlint --from "$(git merge-base origin/main HEAD)" --to HEAD
+                      fi
+
+    publish:
+        executor: node
+        steps:
+            - checkout
+            - setup-bun
+            - run: bun install --frozen-lockfile
+            - run:
+                  name: Publish the packages to npm
+                  command: |
+                      for dir in packages/ui packages/dom; do
+                          name=$(node -p "require('./$dir/package.json').name")
+                          version=$(node -p "require('./$dir/package.json').version")
+                          if npm view "$name@$version" version >/dev/null 2>&1; then
+                              echo "$name@$version is already published"
+                          else
+                              (cd "$dir" && NPM_CONFIG_TOKEN="$NPM_TOKEN" bun publish --access public)
+                          fi
+                      done
+
+workflows:
+    ci:
+        jobs:
+            - reuse
+            - check
+            - coverage:
+                  context: codecov
+            - secrets
+            - commitlint
+    release:
+        jobs:
+            - check:
+                  filters: &tags
+                      tags:
+                          only: /^v.*/
+                      branches:
+                          ignore: /.*/
+            - publish:
+                  context: npm-publish
+                  requires: [check]
+                  filters: *tags

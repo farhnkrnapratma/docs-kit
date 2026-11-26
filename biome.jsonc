@@ -1,0 +1,89 @@
+// SPDX-FileCopyrightText: 2026 Farhan Kurnia Pratama
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+{
+    "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+    "vcs": {
+        "enabled": true,
+        "clientKind": "git",
+        "useIgnoreFile": true,
+        "defaultBranch": "develop"
+    },
+    "files": {
+        "ignoreUnknown": true,
+        "includes": [
+            "**",
+            "!**/.svelte-kit",
+            "!**/*.md",
+            "!tests/fixtures",
+            "!tests/__snapshots__",
+            "!**/skills-lock.json",
+            "!.claude/skills/graphify",
+            "!.claude/skills/caveman-*",
+            "!.claude/skills/security-audit",
+            "!.agents/skills"
+        ]
+    },
+    "formatter": {
+        "enabled": true,
+        "indentStyle": "space",
+        "indentWidth": 4,
+        "lineEnding": "lf",
+        "lineWidth": 100,
+        "bracketSameLine": true,
+        "expand": "never"
+    },
+    "javascript": {
+        "formatter": {
+            "quoteStyle": "single",
+            "jsxQuoteStyle": "single",
+            "trailingCommas": "none",
+            "arrowParentheses": "asNeeded"
+        }
+    },
+    "json": { "formatter": { "expand": "auto" } },
+    "css": { "parser": { "tailwindDirectives": true }, "formatter": { "quoteStyle": "single" } },
+    "html": {
+        "experimentalFullSupportEnabled": true,
+        "formatter": { "enabled": true, "selfCloseVoidElements": "always" }
+    },
+    "assist": { "enabled": false },
+    "plugins": [
+        { "path": "./tooling/biome/ui-imports.grit", "includes": ["packages/ui/**"] },
+        { "path": "./tooling/biome/dom-imports.grit", "includes": ["packages/dom/**"] }
+    ],
+    "linter": {
+        "enabled": true,
+        "rules": {
+            "preset": "recommended",
+            "a11y": {
+                "noHeaderScope": "warn",
+                "noLabelWithoutControl": "warn",
+                "noNoninteractiveTabindex": "warn",
+                "noRedundantRoles": "warn",
+                "noStaticElementInteractions": "warn",
+                "useAriaPropsSupportedByRole": "warn",
+                "useSemanticElements": "warn"
+            },
+            "correctness": {
+                "noInvalidPositionAtImportRule": "warn",
+                "noVoidTypeReturn": "warn"
+            },
+            "style": {
+                "noNonNullAssertion": "off"
+            },
+            "suspicious": {
+                "noAssignInExpressions": "warn",
+                "noDeprecatedImports": "error",
+                "noExplicitAny": "off",
+                "noImplicitAnyLet": "warn",
+                "noShadowRestrictedNames": "warn",
+                "useIterableCallbackReturn": "warn"
+            }
+        }
+    },
+    "overrides": [
+        { "includes": [".fallowrc.json"], "json": { "parser": { "allowComments": true } } },
+        { "includes": ["**/*.svelte"], "formatter": { "enabled": false } }
+    ]
+}

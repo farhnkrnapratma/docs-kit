@@ -1,0 +1,26 @@
+// SPDX-FileCopyrightText: 2026 Farhan Kurnia Pratama
+//
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+export const ADMIN_CHART_AXIS_CLASSES = {
+    tickLabel: 'text-xxs fill-fg-muted font-mono',
+    rule: 'stroke-line-subtle'
+};
+
+export const ADMIN_CHART_PADDING = { top: 16, right: 48, bottom: 48, left: 64 };
+
+export function adminChartPadding(maxValue: number) {
+    const label = new Intl.NumberFormat('en-US').format(Math.round(maxValue));
+    return {
+        ...ADMIN_CHART_PADDING,
+        left: Math.max(ADMIN_CHART_PADDING.left, 28 + label.length * 8)
+    };
+}
+
+export const ADMIN_CHART_TICK_LENGTH = 6;
+
+const tickLabelBase = { stroke: 'none', strokeWidth: 0, capHeight: '9px', lineHeight: '14px' };
+
+export const ADMIN_CHART_X_TICK_LABEL_PROPS = { ...tickLabelBase, dy: 20 };
+
+export const ADMIN_CHART_Y_TICK_LABEL_PROPS = { ...tickLabelBase, dx: -20 };

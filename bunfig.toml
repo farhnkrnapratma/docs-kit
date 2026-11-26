@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2026 Farhan Kurnia Pratama
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+telemetry = false
+
+[install]
+linker = "hoisted"
+
+[run]
+shell = "bun"
+
+[test]
+preload = ["./tests/preload.ts"]
+coverageSkipTestFiles = true
+coveragePathIgnorePatterns = ["node_modules", "tests/", "tooling/"]

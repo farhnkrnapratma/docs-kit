@@ -1,0 +1,110 @@
+<!--
+SPDX-FileCopyrightText: 2026 Farhan Kurnia Pratama
+
+SPDX-License-Identifier: MIT OR Apache-2.0
+-->
+
+<script lang="ts">
+    import { setContext, type Snippet } from 'svelte';
+    import { cn } from '../../utils/cn';
+    import FilterMenu from './FilterMenu.svelte';
+    import type { FilterMenuGroup } from './filterMenu';
+    import {
+        FILTER_TOOLBAR_CONTROL_SIZE,
+        type FilterToolbarControlSize
+    } from './filterToolbarContext';
+
+    interface Props {
+        title?: string;
+        controlSize?: FilterToolbarControlSize;
+        embedded?: boolean;
+        searchSlot?: Snippet;
+        filterControlsSlot?: Snippet;
+        sortSlot?: Snippet;
+        chipsSlot?: Snippet;
+        countSlot?: Snippet;
+        mobileGroups?: FilterMenuGroup[];
+        onClearFilters?: () => void;
+        class?: string;
+    }
+
+    let {
+        title = '',
+        controlSize = 'md',
+        embedded = false,
+        searchSlot,
+        filterControlsSlot,
+        sortSlot,
+        chipsSlot,
+        countSlot,
+        mobileGroups,
+        onClearFilters,
+        class: className = ''
+    }: Props = $props();
+
+    setContext(FILTER_TOOLBAR_CONTROL_SIZE, {
+        get controlSize() {
+            return controlSize;
+        },
+        get stackOnMobile() {
+            return true;
+        }
+    });
+</script>
+
+<div
+    role="region"
+    aria-label={title || 'Filter and sort options'}
+    class={cn(
+        '@container relative z-20 flex flex-col gap-2.5 select-none',
+        embedded ? 'border-b border-line-subtle px-4 pb-3' : 'rounded-md glass-card p-3 sm:p-4',
+        className
+    )}>
+    <div class="flex min-w-0 flex-col gap-2 @2xl:flex-row @2xl:flex-nowrap @2xl:items-center">
+        {#if searchSlot || mobileGroups}
+            <div class="flex min-w-0 items-center gap-2 @2xl:contents">
+                {#if searchSlot}
+                    <div class="min-w-0 flex-1 @2xl:min-w-48 @2xl:flex-[1_0_12rem]">
+                        {@render searchSlot()}
+                    </div>
+                {/if}
+                {#if mobileGroups}
+                    <FilterMenu
+                        groups={mobileGroups}
+                        onClear={onClearFilters}
+                        class="ml-auto @2xl:hidden" />
+                {/if}
+            </div>
+        {/if}
+        <div
+            class={cn(
+                'min-w-0 items-center justify-between gap-2 overflow-x-auto @2xl:contents',
+                mobileGroups ? 'hidden' : 'flex'
+            )}>
+            {#if filterControlsSlot}
+                <div
+                    class={cn(
+                        'flex min-w-0 items-center gap-2 @2xl:contents',
+                        sortSlot ? 'flex-initial' : 'flex-1'
+                    )}>
+                    {@render filterControlsSlot()}
+                </div>
+            {/if}
+            {#if sortSlot}
+                <div class="min-w-0 flex-1 @2xl:contents">
+                    {@render sortSlot()}
+                </div>
+            {/if}
+        </div>
+    </div>
+
+    {#if countSlot}
+        {@render countSlot()}
+    {/if}
+
+    {#if chipsSlot}
+        <div class={mobileGroups ? 'hidden @2xl:contents' : 'contents'}>
+            {@render chipsSlot()}
+        </div>
+    {/if}
+</div>
