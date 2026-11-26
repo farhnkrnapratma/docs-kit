@@ -25,6 +25,13 @@ import { readingModeStore } from '../packages/ui/src/stores/readingModeStore.sve
 
 const anchorClick = HTMLAnchorElement.prototype.click;
 
+mock.module('highlight.js/styles/github.css?url', () => ({ default: '/light.css' }));
+
+const themeLink = () =>
+    [...document.head.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')].find(link =>
+        /\/(light|dark)\.css$/.test(link.getAttribute('href') ?? '')
+    ) as HTMLLinkElement;
+
 const flush = () => new Promise(resolve => setTimeout(resolve, 0));
 const fire = (node: Element | Document, type: string) =>
     node.dispatchEvent(new window.Event(type, { bubbles: true }));
@@ -136,15 +143,16 @@ describe('theme stylesheet', () => {
         const first = ensureHljsThemeStylesheet('light');
         const again = ensureHljsThemeStylesheet('light');
         expect(again).toBe(first);
-        const link = document.head.querySelector('link[rel="stylesheet"]') as HTMLLinkElement;
         await flush();
-        if (link) fire(link, 'load');
+        const link = themeLink();
+        expect(link.getAttribute('href')).toBe('/light.css');
+        fire(link, 'load');
         await first;
         await ensureHljsThemeStylesheet('light');
 
         const dark = ensureHljsThemeStylesheet('dark');
         await flush();
-        const shared = document.head.querySelector('link[rel="stylesheet"]') as HTMLLinkElement;
+        const shared = themeLink();
         fire(shared, 'error');
         await dark;
         const retry = ensureHljsThemeStylesheet('dark');
@@ -152,6 +160,40 @@ describe('theme stylesheet', () => {
         fire(shared, 'load');
         await retry;
         await ensureHljsThemeStylesheet('dark');
+    });
+
+    test('marks a theme loaded once its stylesheet loads', async () => {
+        const toDark = ensureHljsThemeStylesheet('dark');
+        await flush();
+        fire(themeLink(), 'load');
+        await toDark;
+        const toLight = ensureHljsThemeStylesheet('light');
+        await flush();
+        expect(themeLink().getAttribute('href')).toBe('/light.css');
+        fire(themeLink(), 'load');
+        await toLight;
+        expect(ensureHljsThemeStylesheet('light')).toBeInstanceOf(Promise);
+    });
+
+    test('treats a stylesheet that fails to load as not loaded', async () => {
+        const add = HTMLLinkElement.prototype.addEventListener;
+        HTMLLinkElement.prototype.addEventListener = function (
+            this: HTMLLinkElement,
+            type: string,
+            listener: EventListenerOrEventListenerObject,
+            options?: boolean | AddEventListenerOptions
+        ) {
+            add.call(this, type, listener, options);
+            if (type === 'error') this.dispatchEvent(new window.Event('error'));
+        } as typeof add;
+        try {
+            await ensureHljsThemeStylesheet('dark');
+            await ensureHljsThemeStylesheet('light');
+            await ensureHljsThemeStylesheet('dark');
+        } finally {
+            HTMLLinkElement.prototype.addEventListener = add;
+        }
+        expect(themeLink()).toBeDefined();
     });
 
     test('supersedes an in-flight load with the newer request', async () => {

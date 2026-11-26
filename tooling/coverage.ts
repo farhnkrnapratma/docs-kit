@@ -72,6 +72,7 @@ let lines = 0;
 let linesHit = 0;
 let functions = 0;
 let functionsHit = 0;
+const gaps: string[] = [];
 const out: string[] = [];
 for (const [path, file] of [...merged].sort(([a], [b]) => a.localeCompare(b))) {
     out.push(`SF:${path}`);
@@ -81,7 +82,14 @@ for (const [path, file] of [...merged].sort(([a], [b]) => a.localeCompare(b))) {
     linesHit += [...file.lines.values()].filter(hits => hits > 0).length;
     functions += file.functions;
     functionsHit += file.functionsHit;
+    const missed = [...file.lines].filter(([, hits]) => hits === 0).map(([line]) => line);
+    if (missed.length || file.functionsHit < file.functions) {
+        gaps.push(
+            `${path}: functions ${file.functionsHit}/${file.functions}, lines missed ${missed.join(',') || 'none'}`
+        );
+    }
 }
+if (gaps.length) console.log(`\nNot fully covered:\n${gaps.join('\n')}`);
 mkdirSync(join(root, 'coverage'), { recursive: true });
 writeFileSync(join(root, 'coverage/lcov.info'), out.join('\n') + '\n');
 rmSync(work, { recursive: true, force: true });

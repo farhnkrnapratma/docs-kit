@@ -31,7 +31,10 @@ const saved = Object.fromEntries(
     natives.map(name => [name, (globalThis as Record<string, unknown>)[name]])
 );
 
-GlobalRegistrator.register({ url: 'https://dom.test/' });
+GlobalRegistrator.register({
+    url: 'https://dom.test/',
+    settings: { handleDisabledFileLoadingAsSuccess: true }
+});
 Object.assign(globalThis, saved);
 
 Element.prototype.animate = function animate(_frames: unknown, options?: unknown) {

@@ -9,6 +9,7 @@ import {
     onTabPreference,
     setTabPreference
 } from '../packages/dom/src/tabs.ts';
+import { enhanceMarkdownContent } from '../packages/dom/src/enhance.ts';
 
 const anchorClick = HTMLAnchorElement.prototype.click;
 
@@ -145,6 +146,17 @@ describe('enhanceMarkdownTabs', () => {
         enhanceMarkdownTabs(plain);
         expect(inner.group.dataset.mdrsEnhanced).toBe('true');
         enhanceMarkdownTabs();
+    });
+
+    test('copies without a toast callback', async () => {
+        const viaTabs = tabs([{ label: 'A', code: 'alpha' }]);
+        enhanceMarkdownTabs(viaTabs.group.parentElement as HTMLElement);
+        viaTabs.group.querySelector<HTMLElement>('[aria-label="Copy code"]')!.click();
+        const viaContent = tabs([{ label: 'B', code: 'beta' }]);
+        await enhanceMarkdownContent({ container: viaContent.group.parentElement, isDark: false });
+        viaContent.group.querySelector<HTMLElement>('[aria-label="Copy code"]')!.click();
+        await new Promise(resolve => setTimeout(resolve, 0));
+        expect(written).toEqual(['alpha', 'beta']);
     });
 
     test('skips controls without a header or with existing actions', () => {

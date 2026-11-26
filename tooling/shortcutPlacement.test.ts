@@ -204,3 +204,31 @@ test('a shortcut without a label is named after the element', async () => {
     expect(named(node => (node.textContent = '  Save draft  '))).toContain('Save draft');
     expect(named(() => {})).toContain('Action');
 });
+
+test('a badge moves off another visible badge it would overlap', () => {
+    const first = document.createElement('div');
+    const second = document.createElement('div');
+    document.body.append(first, second);
+    const caret = (document as unknown as Record<string, unknown>).caretPositionFromPoint;
+    delete (document as unknown as Record<string, unknown>).caretPositionFromPoint;
+    cleanups.push(() => {
+        (document as unknown as Record<string, unknown>).caretPositionFromPoint = caret;
+    });
+    withViewport(1000, 800, () =>
+        withLayout(
+            {
+                rect: element =>
+                    element === first || element === second
+                        ? rect(0, 0, 200, 40)
+                        : element.hasAttribute('data-shortcut-hint')
+                          ? rect(150, 0, 40, 20)
+                          : rect(0, 0, 0, 0)
+            },
+            () => {
+                shortcutWithAlt(first, { combo: 'a', label: 'One' } as never);
+                shortcutWithAlt(second, { combo: 'b', label: 'Two' } as never);
+                expect(document.querySelectorAll('[data-shortcut-hint]').length).toBe(2);
+            }
+        )
+    );
+});
