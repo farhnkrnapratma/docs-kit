@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
+import { isSafeSvg, type SvgSource } from './svgSafety';
 import { themeToken, type EffectiveTheme } from '@farhnkrnapratma/docs-ui/themeColors.ts';
 
 let mermaidInstance: typeof import('mermaid').default | null = null;
@@ -134,9 +135,18 @@ function isFresh(block: HTMLElement, displayEl: HTMLElement, themeName: string) 
     );
 }
 
+class BlockedDiagram extends Error {}
+
+function checked(svg: string, source: SvgSource) {
+    if (!isSafeSvg(svg, source)) {
+        throw new BlockedDiagram('the diagram was blocked because its SVG could run script.');
+    }
+}
+
 async function drawWithMermaid(block: HTMLElement, id: string, rawCode: string, isDark: boolean) {
     const mermaid = await getMermaid(isDark);
     const { svg } = await mermaid.render(id, rawCode);
+    checked(svg, 'mermaid');
     block.setAttribute('data-mdrs-renderer', 'mermaid');
     block.setAttribute('data-mdrs-theme', isDark ? 'dark' : 'light');
     return svg;
@@ -146,10 +156,11 @@ async function draw(block: HTMLElement, id: string, rawCode: string, isDark: boo
     try {
         const pelers = await loadPelers();
         const { svg } = await pelers.renderAsync(rawCode, { idPrefix: id });
+        checked(svg, 'pelers');
         block.setAttribute('data-mdrs-renderer', 'pelers');
         return svg;
     } catch (error) {
-        if (!isUnsupported(error)) throw error;
+        if (error instanceof BlockedDiagram || !isUnsupported(error)) throw error;
         return drawWithMermaid(block, id, rawCode, isDark);
     }
 }

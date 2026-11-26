@@ -8,7 +8,8 @@ const renders: { id: string; code: string }[] = [];
 const initializations: Record<string, any>[] = [];
 let renderFails = false;
 let initializeFails = false;
-let pelersMode: 'ok' | 'unsupported' | 'syntax' = 'ok';
+let pelersMode: 'ok' | 'unsupported' | 'syntax' | 'unsafe' = 'ok';
+let mermaidSvg: string | null = null;
 const pelersRenders: { code: string; idPrefix?: string }[] = [];
 
 mock.module('@farhnkrnapratma/pelers/lazy', () => ({
@@ -22,6 +23,7 @@ mock.module('@farhnkrnapratma/pelers/lazy', () => ({
         if (pelersMode === 'syntax') {
             throw Object.assign(new Error('Parse error on line 2'), { code: 'syntax' });
         }
+        if (pelersMode === 'unsafe') return { svg: '<svg><g onload="alert(1)"></g></svg>' };
         return { svg: `<svg class="pelers" data-prefix="${options.idPrefix}"><g/></svg>` };
     }
 }));
@@ -35,7 +37,7 @@ mock.module('mermaid', () => ({
         render: async (id: string, code: string) => {
             renders.push({ id, code });
             if (renderFails) throw new Error('bad diagram');
-            return { svg: `<svg data-id="${id}"><g/></svg>` };
+            return { svg: mermaidSvg ?? `<svg data-id="${id}"><g/></svg>` };
         }
     }
 }));
@@ -76,6 +78,7 @@ beforeEach(() => {
     renderFails = false;
     initializeFails = false;
     pelersMode = 'unsupported';
+    mermaidSvg = null;
     pelersRenders.length = 0;
     clipboardFails = false;
     written = [];
@@ -122,6 +125,25 @@ describe('enhanceMermaidBlocks with pelers', () => {
         await enhanceMermaidBlocks(document.body, true);
         expect(pelersRenders.length).toBe(1);
         expect(await loadPelers()).toBe(await loadPelers());
+    });
+
+    test('blocks unsafe svg from either renderer instead of inserting it', async () => {
+        pelersMode = 'unsafe';
+        const fromPelers = block('flowchart LR\n A-->B');
+        await enhanceMermaidBlocks();
+        expect(renders).toEqual([]);
+        expect(fromPelers.querySelector('svg')).toBeNull();
+        expect(fromPelers.querySelector('.mdrs-mermaid-error')?.textContent).toBe(
+            'Failed to render Mermaid diagram: the diagram was blocked because its SVG could run script.'
+        );
+        fromPelers.remove();
+        pelersMode = 'unsupported';
+        mermaidSvg = '<svg><a href="javascript:alert(1)">x</a></svg>';
+        const fromMermaid = block('zenuml\n A->B: hi');
+        await enhanceMermaidBlocks();
+        expect(renders.length).toBe(1);
+        expect(fromMermaid.querySelector('a')).toBeNull();
+        expect(fromMermaid.querySelector('.mdrs-mermaid-error')?.textContent).toContain('blocked');
     });
 
     test('shows pelers syntax errors without trying mermaid', async () => {
