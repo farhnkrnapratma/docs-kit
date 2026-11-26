@@ -23,6 +23,10 @@ function parse(lcov: string, into: Map<string, FileCoverage>) {
     for (const row of lcov.split('\n')) {
         if (row.startsWith('SF:')) {
             const path = row.slice(3);
+            if (!path.startsWith('packages/')) {
+                file = undefined;
+                continue;
+            }
             file = into.get(path) ?? { lines: new Map(), functions: 0, functionsHit: 0 };
             into.set(path, file);
         } else if (file && row.startsWith('DA:')) {

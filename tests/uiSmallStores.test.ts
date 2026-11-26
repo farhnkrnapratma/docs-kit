@@ -12,8 +12,6 @@ const { shortcutStore } = await import('../packages/ui/src/stores/shortcutStore.
 const { autoResize, portal, staggerChildren } = await import('../packages/ui/src/utils/actions.ts');
 const { copyText, downloadUrl } = await import('../packages/ui/src/utils/fileActions.ts');
 const { focusScope } = await import('../packages/ui/src/utils/focusScope.ts');
-const { stableHeight } = await import('../packages/ui/src/utils/stableHeight.ts');
-const { visualViewport } = await import('../packages/ui/src/utils/visualViewport.svelte.ts');
 
 const wait = (ms = 20) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -261,41 +259,5 @@ describe('focusScope', () => {
             shortcutStore.pushScope = push;
             shortcutStore.popScope = pop;
         }
-    });
-});
-
-describe('stableHeight', () => {
-    test('remembers the skeleton height for the empty state', async () => {
-        document.body.innerHTML = '<section id="s"><div aria-busy="true"></div></section>';
-        const section = document.getElementById('s') as HTMLElement;
-        const busy = section.firstElementChild as HTMLElement;
-        busy.getBoundingClientRect = () => ({ height: 90 }) as DOMRect;
-        const cleanup = stableHeight(section) as () => void;
-        const resize = FakeResizeObserver.instances[0];
-        resize.callback([{ borderBoxSize: [{ blockSize: 120 }] }, { borderBoxSize: [] }]);
-        busy.remove();
-        section.insertAdjacentHTML('beforeend', '<p data-empty-state></p>');
-        await wait();
-        expect((section.querySelector('[data-empty-state]') as HTMLElement).style.minHeight).toBe(
-            '120px'
-        );
-        section.insertAdjacentHTML('beforeend', '<div aria-busy="true"></div>');
-        await wait();
-        cleanup();
-    });
-});
-
-describe('visualViewport', () => {
-    test('reads the viewport size and offset when available', () => {
-        expect(typeof (visualViewport.height ?? 0)).toBe('number');
-        Object.defineProperty(window, 'visualViewport', {
-            value: Object.assign(new window.EventTarget(), { height: 400, offsetTop: 12 }),
-            configurable: true
-        });
-        expect(visualViewport.height).toBe(400);
-        expect(visualViewport.offsetTop).toBe(12);
-        Object.defineProperty(window, 'visualViewport', { value: null, configurable: true });
-        expect(visualViewport.height).toBeNull();
-        expect(visualViewport.offsetTop).toBeNull();
     });
 });

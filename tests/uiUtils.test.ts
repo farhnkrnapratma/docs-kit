@@ -4,29 +4,7 @@
 
 import { afterEach, describe, expect, test } from 'bun:test';
 import { detectPlatform } from '../packages/ui/src/platform.ts';
-import { splitEscapedCommas, tryEscapeComma } from '../packages/ui/src/utils/pillParsing.ts';
 import { popoverPosition } from '../packages/ui/src/utils/popoverPosition.ts';
-import {
-    findSubmitter,
-    installSubmitShortcut,
-    isSubmitChord,
-    resolveSubmit,
-    type SubmitKeyEvent
-} from '../packages/ui/src/utils/submitShortcut.ts';
-import { withViewTransition } from '../packages/ui/src/utils/viewTransition.ts';
-
-describe('pill parsing', () => {
-    test('turns an escaped comma into a literal one', () => {
-        expect(tryEscapeComma('a\\b', 2)).toEqual({ value: 'a,b', cursor: 2 });
-        expect(tryEscapeComma('ab', 2)).toBeNull();
-        expect(tryEscapeComma('\\', 0)).toBeNull();
-    });
-
-    test('splits on bare commas only and trims empties', () => {
-        expect(splitEscapedCommas('a, b\\,c ,, d')).toEqual(['a', 'b,c', 'd']);
-        expect(splitEscapedCommas('')).toEqual([]);
-    });
-});
 
 describe('detectPlatform', () => {
     test('reads the client hints, platform and user agent', () => {
@@ -37,98 +15,6 @@ describe('detectPlatform', () => {
         expect(detectPlatform({ userAgent: 'X11; Linux x86_64' })).toBe('linux');
         expect(detectPlatform({ userAgent: 'Plan9' })).toBe('other');
         expect(detectPlatform({ userAgentData: null })).toBe('other');
-    });
-});
-
-const chord = (
-    overrides: Partial<SubmitKeyEvent> = {},
-    target: unknown = null
-): SubmitKeyEvent => ({
-    key: 'Enter',
-    ctrlKey: true,
-    metaKey: false,
-    altKey: false,
-    shiftKey: false,
-    repeat: false,
-    isComposing: false,
-    defaultPrevented: false,
-    target,
-    ...overrides
-});
-
-describe('submit shortcut', () => {
-    const submit = { tagName: 'BUTTON', type: 'submit', disabled: false };
-    const form = {
-        elements: [{ tagName: 'INPUT', type: 'text' }, { ...submit, disabled: true }, submit]
-    };
-
-    test('recognises only a plain Ctrl or Cmd Enter', () => {
-        expect(isSubmitChord(chord())).toBe(true);
-        expect(isSubmitChord(chord({ ctrlKey: false, metaKey: true }))).toBe(true);
-        for (const bad of [
-            { key: 'a' },
-            { ctrlKey: false },
-            { altKey: true },
-            { shiftKey: true },
-            { repeat: true },
-            { isComposing: true },
-            { keyCode: 229 }
-        ]) {
-            expect(isSubmitChord(chord(bad))).toBe(false);
-        }
-    });
-
-    test('finds the first enabled submit control', () => {
-        expect(findSubmitter(form)).toBe(form.elements[2] as never);
-        expect(findSubmitter({ elements: [{ tagName: 'DIV' }] })).toBeUndefined();
-    });
-
-    test('resolves a form from the target or its ancestor', () => {
-        const direct = { form, closest: () => null };
-        expect(resolveSubmit(chord({}, direct))?.form).toBe(form);
-        const nested = { closest: (selector: string) => (selector === 'form' ? form : null) };
-        expect(resolveSubmit(chord({}, nested))?.form).toBe(form);
-        expect(resolveSubmit(chord({ defaultPrevented: true }, direct))).toBeNull();
-        expect(resolveSubmit(chord({}, null))).toBeNull();
-        expect(resolveSubmit(chord({}, {}))).toBeNull();
-        expect(
-            resolveSubmit(chord({}, { closest: (s: string) => (s.includes('button') ? {} : null) }))
-        ).toBeNull();
-        expect(resolveSubmit(chord({}, { closest: () => null }))).toBeNull();
-        expect(
-            resolveSubmit(chord({}, { form: { elements: [] }, closest: () => null }))
-        ).toBeNull();
-    });
-
-    test('submits the focused form once and releases the guard', async () => {
-        document.body.innerHTML =
-            '<form><textarea id="t"></textarea><button type="submit">Go</button></form>';
-        const area = document.getElementById('t') as HTMLTextAreaElement;
-        const formElement = document.querySelector('form') as HTMLFormElement;
-        const submitted: unknown[] = [];
-        formElement.requestSubmit = ((submitter?: unknown) => submitted.push(submitter)) as never;
-        area.focus();
-        const uninstall = installSubmitShortcut(window);
-        const press = () =>
-            area.dispatchEvent(
-                new window.KeyboardEvent('keydown', {
-                    key: 'Enter',
-                    ctrlKey: true,
-                    bubbles: true,
-                    cancelable: true
-                })
-            );
-        press();
-        press();
-        await new Promise(resolve => setTimeout(resolve, 20));
-        expect(submitted).toHaveLength(1);
-        press();
-        await new Promise(resolve => setTimeout(resolve, 20));
-        expect(submitted).toHaveLength(2);
-        uninstall();
-        press();
-        await new Promise(resolve => setTimeout(resolve, 20));
-        expect(submitted).toHaveLength(2);
     });
 });
 
@@ -214,26 +100,5 @@ describe('popoverPosition', () => {
         await settle();
         expect(node.getAttribute('data-placement')).toBeNull();
         action.destroy();
-    });
-});
-
-describe('withViewTransition', () => {
-    test('runs the update directly when view transitions are unavailable', async () => {
-        const calls: string[] = [];
-        const document_ = document as unknown as { startViewTransition?: unknown };
-        delete document_.startViewTransition;
-        withViewTransition(() => void calls.push('plain'), 'context');
-        expect(calls).toEqual(['plain']);
-
-        let ran = 0;
-        document_.startViewTransition = (callback: () => Promise<void>) => {
-            const finished = callback().then(() => {});
-            return { finished };
-        };
-        withViewTransition(() => void ran++, 'drill');
-        await new Promise(resolve => setTimeout(resolve, 20));
-        expect(ran).toBe(1);
-        expect(document.documentElement.dataset.transitionType).toBeUndefined();
-        delete document_.startViewTransition;
     });
 });

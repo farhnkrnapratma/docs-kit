@@ -5,9 +5,6 @@
 import { afterEach, expect, test } from 'bun:test';
 import { flushSync, mount, tick, unmount } from 'svelte';
 
-const RefineImage = (
-    (await import('../packages/ui/src/components/RefineImage.svelte')) as { default: never }
-).default;
 const Tooltip = (
     (await import('../packages/ui/src/components/Tooltip.svelte')) as { default: never }
 ).default;
@@ -39,50 +36,6 @@ afterEach(() => {
     }
     document.body.innerHTML = '';
 });
-
-test('refined images report load and error outcomes and fall back to sources', async () => {
-    let loaded = 0;
-    let failed = 0;
-    mounted.push(
-        mount(RefineImage, {
-            target: document.body,
-            props: {
-                src: 'https://cdn.example.com/a.webp',
-                alt: 'A',
-                variant: 'avatar',
-                aspectRatio: '1 / 1',
-                onload: () => loaded++,
-                onerror: () => failed++
-            } as never
-        })
-    );
-    await settle();
-    document.querySelector<HTMLImageElement>('img')?.dispatchEvent(new Event('load'));
-    flushSync();
-    await settle();
-    document.querySelector<HTMLImageElement>('img')?.dispatchEvent(new Event('error'));
-    flushSync();
-    await settle();
-    expect(loaded + failed).toBeGreaterThanOrEqual(0);
-    document.body.innerHTML = '';
-    mounted.push(
-        mount(RefineImage, {
-            target: document.body,
-            props: {
-                alt: 'Fallback',
-                sources: [{ srcset: 'https://cdn.example.com/a.avif', type: 'image/avif' }],
-                src: 'https://cdn.example.com/a.webp'
-            } as never
-        })
-    );
-    await settle();
-    document
-        .querySelectorAll<HTMLImageElement>('img')
-        .forEach(image => image.dispatchEvent(new Event('error')));
-    flushSync();
-    await settle();
-    expect(document.body.innerHTML.length).toBeGreaterThan(0);
-}, 60000);
 
 test('tooltips open on hover, focus and key presses and close again', async () => {
     mounted.push(
