@@ -34,6 +34,28 @@ const saved = Object.fromEntries(
 GlobalRegistrator.register({ url: 'https://dom.test/' });
 Object.assign(globalThis, saved);
 
+Element.prototype.animate = function animate(_frames: unknown, options?: unknown) {
+    const duration =
+        typeof options === 'number'
+            ? options
+            : Number((options as { duration?: number })?.duration ?? 0);
+    const animation = {
+        playState: 'running',
+        effect: null as unknown,
+        currentTime: 0,
+        onfinish: null as null | (() => void),
+        cancel() {
+            animation.playState = 'idle';
+            clearTimeout(timer);
+        }
+    };
+    const timer = setTimeout(() => {
+        animation.playState = 'finished';
+        animation.onfinish?.();
+    }, duration);
+    return animation as unknown as Animation;
+};
+
 const modules = new URL('../node_modules/', import.meta.url).pathname;
 const redirects: Record<string, string> = {
     svelte: 'svelte/src/index-client.js',
