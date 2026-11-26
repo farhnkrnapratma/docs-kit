@@ -8,6 +8,23 @@ const renders: { id: string; code: string }[] = [];
 const initializations: Record<string, any>[] = [];
 let renderFails = false;
 let initializeFails = false;
+let pelersMode: 'ok' | 'unsupported' | 'syntax' = 'ok';
+const pelersRenders: { code: string; idPrefix?: string }[] = [];
+
+mock.module('@farhnkrnapratma/pelers/lazy', () => ({
+    renderAsync: async (code: string, options: { idPrefix?: string }) => {
+        pelersRenders.push({ code, idPrefix: options.idPrefix });
+        if (pelersMode === 'unsupported') {
+            throw Object.assign(new Error('Diagram type "zenuml" is not supported yet.'), {
+                code: 'unsupported-diagram'
+            });
+        }
+        if (pelersMode === 'syntax') {
+            throw Object.assign(new Error('Parse error on line 2'), { code: 'syntax' });
+        }
+        return { svg: `<svg class="pelers" data-prefix="${options.idPrefix}"><g/></svg>` };
+    }
+}));
 
 mock.module('mermaid', () => ({
     default: {
@@ -23,7 +40,7 @@ mock.module('mermaid', () => ({
     }
 }));
 
-const { enhanceMermaidBlocks, getMermaid, initMermaidThemeObserver } = await import(
+const { enhanceMermaidBlocks, getMermaid, initMermaidThemeObserver, loadPelers } = await import(
     '../packages/dom/src/mermaid.ts'
 );
 
@@ -58,6 +75,8 @@ beforeEach(() => {
     initializations.length = 0;
     renderFails = false;
     initializeFails = false;
+    pelersMode = 'unsupported';
+    pelersRenders.length = 0;
     clipboardFails = false;
     written = [];
     Object.defineProperty(navigator, 'clipboard', {
@@ -87,7 +106,55 @@ describe('getMermaid', () => {
     });
 });
 
-describe('enhanceMermaidBlocks', () => {
+describe('enhanceMermaidBlocks with pelers', () => {
+    test('draws diagrams with pelers once, whatever the theme', async () => {
+        pelersMode = 'ok';
+        const target = block('flowchart LR\n A-->B');
+        await enhanceMermaidBlocks();
+        expect(pelersRenders.length).toBe(1);
+        expect(pelersRenders[0].code).toBe('flowchart LR\n A-->B');
+        expect(pelersRenders[0].idPrefix).toStartWith('mdrs-mermaid-svg-');
+        expect(renders).toEqual([]);
+        expect(target.getAttribute('data-mdrs-renderer')).toBe('pelers');
+        expect(target.getAttribute('data-mdrs-enhanced')).toBe('true');
+        expect(target.querySelector('svg')?.classList.contains('mdrs-mermaid-svg')).toBe(true);
+        expect(target.querySelectorAll('.mdrs-mermaid-toolbar').length).toBe(1);
+        await enhanceMermaidBlocks(document.body, true);
+        expect(pelersRenders.length).toBe(1);
+        expect(await loadPelers()).toBe(await loadPelers());
+    });
+
+    test('shows pelers syntax errors without trying mermaid', async () => {
+        pelersMode = 'syntax';
+        const target = block('flowchart LR\n A-->');
+        await enhanceMermaidBlocks();
+        expect(renders).toEqual([]);
+        expect(target.querySelector('.mdrs-mermaid-error')?.textContent).toBe(
+            'Failed to render Mermaid diagram: Parse error on line 2'
+        );
+    });
+
+    test('keeps diagrams the server already drew and adds the toolbar', async () => {
+        const drawn = block('flowchart LR\n A-->B');
+        drawn.classList.add('mdrs-mermaid--static');
+        drawn.querySelector('.mdrs-mermaid-display')!.innerHTML = '<svg class="pelers"><g/></svg>';
+        const empty = block('flowchart LR\n A-->B');
+        empty.classList.add('mdrs-mermaid--static');
+        await enhanceMermaidBlocks();
+        await enhanceMermaidBlocks();
+        expect(pelersRenders).toEqual([]);
+        expect(renders).toEqual([]);
+        expect(drawn.getAttribute('data-mdrs-renderer')).toBe('pelers');
+        expect(drawn.querySelector('svg')?.classList.contains('mdrs-mermaid-svg')).toBe(true);
+        expect(drawn.querySelectorAll('.mdrs-mermaid-toolbar').length).toBe(1);
+        expect(empty.querySelector('.mdrs-mermaid-toolbar')).toBeNull();
+        fire(drawn.querySelectorAll('.mdrs-menu-item')[0], 'click');
+        await flush();
+        expect(written[0]).toStartWith('<svg class="pelers mdrs-mermaid-svg">');
+    });
+});
+
+describe('enhanceMermaidBlocks with the mermaid fallback', () => {
     test('renders diagrams, skips fresh ones and re-renders on theme change', async () => {
         const first = block('graph TD\n A-->B');
         await enhanceMermaidBlocks();
@@ -125,6 +192,15 @@ describe('enhanceMermaidBlocks', () => {
         expect(renders).toEqual([]);
     });
 
+    test('shows a failed mermaid start inline', async () => {
+        const failing = block('zenuml\n A->B: hi');
+        initializeFails = true;
+        await enhanceMermaidBlocks();
+        expect(failing.querySelector('.mdrs-mermaid-error')?.textContent).toBe(
+            'Failed to render Mermaid diagram: init failed'
+        );
+    });
+
     test('shows render failures inline', async () => {
         const failing = block('not a diagram');
         renderFails = true;
@@ -153,11 +229,14 @@ describe('enhanceMermaidBlocks', () => {
         const original = console.error;
         const errors: unknown[] = [];
         console.error = (...args: unknown[]) => void errors.push(args);
-        initializeFails = true;
+        const query = document.body.querySelectorAll;
+        document.body.querySelectorAll = () => {
+            throw new Error('boom');
+        };
         document.documentElement.classList.toggle('dark');
-        document.querySelector('.mdrs-mermaid')!.removeAttribute('data-mdrs-theme');
         await flush();
         await flush();
+        document.body.querySelectorAll = query;
         console.error = original;
         expect(errors.length).toBe(1);
     });

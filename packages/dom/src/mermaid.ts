@@ -76,6 +76,15 @@ function mermaidTheme(theme: EffectiveTheme) {
     };
 }
 
+type Pelers = typeof import('@farhnkrnapratma/pelers/lazy');
+
+let pelersModule: Promise<Pelers> | null = null;
+
+export function loadPelers(): Promise<Pelers> {
+    pelersModule ??= import('@farhnkrnapratma/pelers/lazy');
+    return pelersModule;
+}
+
 export function initMermaidThemeObserver() {
     if (typeof window === 'undefined' || typeof document === 'undefined') return;
     if (themeObserverInitialized) return;
@@ -91,60 +100,92 @@ export function initMermaidThemeObserver() {
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 }
 
+function isUnsupported(error: unknown) {
+    return (error as { code?: string } | null)?.code === 'unsupported-diagram';
+}
+
+function showError(displayEl: HTMLElement, error: unknown) {
+    const message = document.createElement('div');
+    message.className = 'mdrs-mermaid-error';
+    message.textContent = `Failed to render Mermaid diagram: ${(error as Error).message}`;
+    displayEl.replaceChildren(message);
+}
+
+function themeOf(forceTheme?: boolean | 'dark' | 'light') {
+    if (typeof forceTheme === 'boolean') return forceTheme;
+    if (typeof forceTheme === 'string') return forceTheme === 'dark';
+    return typeof document === 'undefined' || document.documentElement.classList.contains('dark');
+}
+
+function adoptStaticDiagram(block: HTMLElement, displayEl: HTMLElement, rawCode: string) {
+    const svg = displayEl.querySelector('svg');
+    if (!svg) return;
+    svg.classList.add('mdrs-mermaid-svg');
+    block.setAttribute('data-mdrs-renderer', 'pelers');
+    block.setAttribute('data-mdrs-enhanced', 'true');
+    attachDiagramToolbar(block, svg.outerHTML, rawCode);
+}
+
+function isFresh(block: HTMLElement, displayEl: HTMLElement, themeName: string) {
+    return (
+        block.getAttribute('data-mdrs-renderer') === 'mermaid' &&
+        block.getAttribute('data-mdrs-theme') === themeName &&
+        displayEl.querySelector('svg') !== null
+    );
+}
+
+async function drawWithMermaid(block: HTMLElement, id: string, rawCode: string, isDark: boolean) {
+    const mermaid = await getMermaid(isDark);
+    const { svg } = await mermaid.render(id, rawCode);
+    block.setAttribute('data-mdrs-renderer', 'mermaid');
+    block.setAttribute('data-mdrs-theme', isDark ? 'dark' : 'light');
+    return svg;
+}
+
+async function draw(block: HTMLElement, id: string, rawCode: string, isDark: boolean) {
+    try {
+        const pelers = await loadPelers();
+        const { svg } = await pelers.renderAsync(rawCode, { idPrefix: id });
+        block.setAttribute('data-mdrs-renderer', 'pelers');
+        return svg;
+    } catch (error) {
+        if (!isUnsupported(error)) throw error;
+        return drawWithMermaid(block, id, rawCode, isDark);
+    }
+}
+
+async function enhanceBlock(block: HTMLElement, index: number, isDark: boolean) {
+    const rawCodeEl = block.querySelector<HTMLElement>('.mdrs-mermaid-source');
+    const displayEl = block.querySelector<HTMLElement>('.mdrs-mermaid-display');
+    if (!rawCodeEl || !displayEl) return;
+    const rawCode = decodeURIComponent(rawCodeEl.getAttribute('data-mdrs-source') || '').trim();
+    if (!rawCode || block.getAttribute('data-mdrs-renderer') === 'pelers') return;
+    if (block.classList.contains('mdrs-mermaid--static')) {
+        adoptStaticDiagram(block, displayEl, rawCode);
+        return;
+    }
+    if (isFresh(block, displayEl, isDark ? 'dark' : 'light')) return;
+
+    const id = `mdrs-mermaid-svg-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`;
+    try {
+        const svg = await draw(block, id, rawCode, isDark);
+        displayEl.innerHTML = svg;
+        block.setAttribute('data-mdrs-enhanced', 'true');
+        displayEl.querySelector<SVGElement>('svg')?.classList.add('mdrs-mermaid-svg');
+        attachDiagramToolbar(block, svg, rawCode);
+    } catch (error) {
+        showError(displayEl, error);
+    }
+}
+
 export async function enhanceMermaidBlocks(
     container: HTMLElement = document.body,
     forceTheme?: boolean | 'dark' | 'light'
 ) {
     initMermaidThemeObserver();
-
-    const isDark =
-        typeof forceTheme === 'boolean'
-            ? forceTheme
-            : typeof forceTheme === 'string'
-              ? forceTheme === 'dark'
-              : typeof document !== 'undefined'
-                ? document.documentElement.classList.contains('dark')
-                : true;
-
-    const themeName = isDark ? 'dark' : 'light';
-    const mermaidBlocks = container.querySelectorAll<HTMLElement>('.mdrs-mermaid');
-    if (!mermaidBlocks.length) return;
-
-    const mermaid = await getMermaid(isDark);
-
-    for (let i = 0; i < mermaidBlocks.length; i++) {
-        const block = mermaidBlocks[i];
-        const prevTheme = block.getAttribute('data-mdrs-theme');
-        if (prevTheme === themeName && block.querySelector('.mdrs-mermaid-display svg')) {
-            continue;
-        }
-
-        const rawCodeEl = block.querySelector<HTMLElement>('.mdrs-mermaid-source');
-        const displayEl = block.querySelector<HTMLElement>('.mdrs-mermaid-display');
-        if (!rawCodeEl || !displayEl) continue;
-
-        const rawCode = decodeURIComponent(rawCodeEl.getAttribute('data-mdrs-source') || '').trim();
-        if (!rawCode) continue;
-
-        const uniqueId = `mdrs-mermaid-svg-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 7)}`;
-
-        try {
-            const { svg } = await mermaid.render(uniqueId, rawCode);
-            displayEl.innerHTML = svg;
-            block.setAttribute('data-mdrs-theme', themeName);
-            block.setAttribute('data-mdrs-enhanced', 'true');
-
-            const svgEl = displayEl.querySelector<SVGElement>('svg');
-            svgEl?.classList.add('mdrs-mermaid-svg');
-
-            attachDiagramToolbar(block, svg, rawCode);
-        } catch (err) {
-            const error = document.createElement('div');
-            error.className = 'mdrs-mermaid-error';
-            error.textContent = `Failed to render Mermaid diagram: ${(err as Error).message}`;
-            displayEl.replaceChildren(error);
-        }
-    }
+    const isDark = themeOf(forceTheme);
+    const blocks = container.querySelectorAll<HTMLElement>('.mdrs-mermaid');
+    for (let i = 0; i < blocks.length; i++) await enhanceBlock(blocks[i], i, isDark);
 }
 
 function attachDiagramToolbar(block: HTMLElement, svgString: string, rawCode: string) {

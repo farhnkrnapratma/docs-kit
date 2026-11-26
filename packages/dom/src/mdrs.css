@@ -525,6 +525,24 @@
 
     .mdrs-mermaid {
         @apply relative my-6 overflow-hidden rounded-md glass-card border border-line-subtle text-fg shadow-md transition-all duration-200;
+        --pelers-bg: transparent;
+        --pelers-fg: var(--color-fg);
+        --pelers-muted: var(--color-fg-muted);
+        --pelers-line: var(--color-fg-secondary);
+        --pelers-surface: var(--color-surface-subtle);
+        --pelers-surface-alt: var(--color-surface-muted);
+        --pelers-border: var(--color-line-strong);
+        --pelers-accent: var(--color-accent);
+        --pelers-critical: var(--color-danger);
+        --pelers-series-1: var(--color-accent);
+        --pelers-series-2: var(--color-discovery);
+        --pelers-series-3: var(--color-warning);
+        --pelers-series-4: var(--color-danger);
+        --pelers-series-5: var(--color-success);
+        --pelers-series-6: var(--color-info);
+        --pelers-font: var(--font-sans);
+        --pelers-font-mono: var(--font-mono);
+        --pelers-radius: var(--radius);
     }
 
     .mdrs-mermaid-display {
