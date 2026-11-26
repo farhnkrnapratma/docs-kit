@@ -23,6 +23,8 @@ import {
 import { codeBlockPrefsStore } from '../packages/dom/src/codeBlockPrefsStore.svelte.ts';
 import { readingModeStore } from '../packages/ui/src/stores/readingModeStore.svelte.ts';
 
+const anchorClick = HTMLAnchorElement.prototype.click;
+
 const flush = () => new Promise(resolve => setTimeout(resolve, 0));
 const fire = (node: Element | Document, type: string) =>
     node.dispatchEvent(new window.Event(type, { bubbles: true }));
@@ -59,6 +61,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+    HTMLAnchorElement.prototype.click = anchorClick;
     unsubscribe();
     readingModeStore.disable();
     delete (document as unknown as { fonts?: unknown }).fonts;

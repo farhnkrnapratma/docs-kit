@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-import { afterEach, expect, test } from 'bun:test';
+import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { createRawSnippet, flushSync, mount, unmount } from 'svelte';
 
 const Tooltip = (
@@ -14,7 +14,7 @@ const originalRect = Element.prototype.getBoundingClientRect;
 let triggerBox = { top: 300, left: 400, width: 100, height: 30 };
 const tooltipBox = { width: 80, height: 20 };
 
-Element.prototype.getBoundingClientRect = function () {
+function stubbedRect(this: Element) {
     const box =
         this.getAttribute('role') === 'tooltip' ? { top: 0, left: 0, ...tooltipBox } : triggerBox;
     return {
@@ -25,9 +25,16 @@ Element.prototype.getBoundingClientRect = function () {
         y: box.top,
         toJSON() {}
     } as DOMRect;
-};
+}
+
+beforeEach(() => {
+    Element.prototype.getBoundingClientRect = stubbedRect;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 768 });
+});
 
 afterEach(() => {
+    Element.prototype.getBoundingClientRect = originalRect;
     for (const instance of mounted.splice(0)) void unmount(instance);
     document.body.innerHTML = '';
     triggerBox = { top: 300, left: 400, width: 100, height: 30 };
@@ -159,5 +166,4 @@ test('opens on keyboard focus and closes on mouse leave and blur', () => {
 test('stays closed when disabled or empty', () => {
     expect(open({ disabled: true }).tip).toBeNull();
     expect(open({ content: '' }).tip).toBeNull();
-    Element.prototype.getBoundingClientRect = originalRect;
 });

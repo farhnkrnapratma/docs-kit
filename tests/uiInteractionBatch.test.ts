@@ -10,14 +10,6 @@ const Tooltip = (
 ).default;
 
 window.addEventListener('error', event => event.preventDefault());
-Element.prototype.animate = () =>
-    ({
-        finished: Promise.resolve(),
-        cancel() {},
-        finish() {},
-        onfinish: null
-    }) as unknown as Animation;
-
 const mounted: object[] = [];
 
 const settle = async () => {

@@ -2,13 +2,15 @@
 //
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import {
     enhanceMarkdownTabs,
     getTabPreference,
     onTabPreference,
     setTabPreference
 } from '../packages/dom/src/tabs.ts';
+
+const anchorClick = HTMLAnchorElement.prototype.click;
 
 const flush = () => new Promise(resolve => setTimeout(resolve, 0));
 const fire = (node: Element, type: string) =>
@@ -78,6 +80,10 @@ beforeEach(() => {
     URL.createObjectURL = () => 'blob:tabs';
     URL.revokeObjectURL = () => {};
     HTMLAnchorElement.prototype.click = () => {};
+});
+
+afterEach(() => {
+    HTMLAnchorElement.prototype.click = anchorClick;
 });
 
 describe('tab preferences', () => {
