@@ -36,6 +36,22 @@ function installMatchMedia() {
     }) as never;
 }
 
+function withBrokenStorage(run: () => void) {
+    const working = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+    const fail = () => {
+        throw new Error('blocked');
+    };
+    Object.defineProperty(globalThis, 'localStorage', {
+        configurable: true,
+        value: { getItem: fail, setItem: fail, removeItem: fail, clear: fail }
+    });
+    try {
+        run();
+    } finally {
+        if (working) Object.defineProperty(globalThis, 'localStorage', working);
+    }
+}
+
 beforeEach(() => {
     unsupported = new Set();
     installMatchMedia();
@@ -91,20 +107,39 @@ describe('a11yStore', () => {
         window.dispatchEvent(new window.StorageEvent('storage', { key: 'other', newValue: 'x' }));
         stop?.();
 
-        const original = Storage.prototype.getItem;
-        Storage.prototype.getItem = () => {
-            throw new Error('blocked');
-        };
-        const setItem = Storage.prototype.setItem;
-        Storage.prototype.setItem = () => {
-            throw new Error('blocked');
-        };
+        withBrokenStorage(() => {
+            a11yStore.init()?.();
+            expect(a11yStore.current.highContrast).toBe(false);
+            a11yStore.toggleHighContrast();
+            expect(a11yStore.current.highContrast).toBe(true);
+            a11yStore.reset();
+        });
+    });
+
+    test('preloads the dyslexia font when the browser is idle or after a delay', async () => {
+        const loads: string[] = [];
+        Object.defineProperty(document, 'fonts', {
+            configurable: true,
+            value: {
+                load: (font: string) => {
+                    loads.push(font);
+                    return Promise.reject(new Error('offline'));
+                }
+            }
+        });
+        const idle = (window as { requestIdleCallback?: unknown }).requestIdleCallback;
+        (window as { requestIdleCallback?: unknown }).requestIdleCallback = (run: () => void) =>
+            run();
         try {
             a11yStore.init()?.();
-            a11yStore.toggleHighContrast();
+            expect(loads).toEqual(['400 1rem "Lexend Variable"']);
+            delete (window as { requestIdleCallback?: unknown }).requestIdleCallback;
+            a11yStore.init()?.();
+            await new Promise(resolve => setTimeout(resolve, 520));
+            expect(loads.length).toBe(2);
         } finally {
-            Storage.prototype.getItem = original;
-            Storage.prototype.setItem = setItem;
+            (window as { requestIdleCallback?: unknown }).requestIdleCallback = idle;
+            delete (document as { fonts?: unknown }).fonts;
         }
     });
 
@@ -154,22 +189,12 @@ describe('themeStore', () => {
     });
 
     test('keeps working when storage throws', () => {
-        const getItem = Storage.prototype.getItem;
-        const setItem = Storage.prototype.setItem;
-        Storage.prototype.getItem = () => {
-            throw new Error('blocked');
-        };
-        Storage.prototype.setItem = () => {
-            throw new Error('blocked');
-        };
-        try {
+        withBrokenStorage(() => {
             themeStore.init()?.();
+            expect(themeStore.current).toBe('auto');
             themeStore.apply('dark');
             expect(themeStore.isDark).toBe(true);
-        } finally {
-            Storage.prototype.getItem = getItem;
-            Storage.prototype.setItem = setItem;
-            themeStore.apply('auto');
-        }
+        });
+        themeStore.apply('auto');
     });
 });

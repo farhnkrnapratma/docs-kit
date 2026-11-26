@@ -5,14 +5,12 @@
 export { default as Button } from './components/Button.svelte';
 export { default as Dropdown } from './components/Dropdown.svelte';
 export { default as IconButton } from './components/IconButton.svelte';
-export { default as Input } from './components/Input.svelte';
 export { default as LoadingIndicator } from './components/LoadingIndicator.svelte';
 export { default as ShortcutBadge } from './components/ShortcutBadge.svelte';
 export { default as SkipLink } from './components/SkipLink.svelte';
 export { default as Toast } from './components/Toast.svelte';
 export { default as Tooltip } from './components/Tooltip.svelte';
 export { default as ThemeSelect } from './components/filter/ThemeSelect.svelte';
-export * from './components/filter/filterToolbarContext';
 export * from './platform';
 export * from './shortcuts';
 export * from './stores/a11yStore.svelte';

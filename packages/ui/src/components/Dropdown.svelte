@@ -29,22 +29,15 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 </script>
 
 <script lang="ts">
-    import FieldLabelText from './FieldLabelText.svelte';
-    import { getContext, tick, type Snippet } from 'svelte';
+    import { tick, type Snippet } from 'svelte';
     import { fromAction } from 'svelte/attachments';
     import { Check, ChevronDown, Square, SquareCheck } from '@lucide/svelte';
-    import type { FormFieldContext } from '../types';
     import { cn } from '../utils/cn';
     import { MENU_ITEM_TONE_CLASSES } from '../utils/menuItemStyles';
     import { portal } from '../utils/actions';
     import { focusScope } from '../utils/focusScope';
     import { popoverPosition } from '../utils/popoverPosition';
     import { shortcut } from '../utils/shortcut.svelte';
-    import Input from './Input.svelte';
-    import {
-        FILTER_TOOLBAR_CONTROL_SIZE,
-        type FilterToolbarContext
-    } from './filter/filterToolbarContext';
 
     interface Props {
         id?: string;
@@ -54,17 +47,13 @@ SPDX-License-Identifier: MIT OR Apache-2.0
         options?: DropdownOption[];
         value?: any;
         multiple?: boolean;
-        searchable?: boolean;
         actions?: DropdownAction[];
         trigger?: Snippet<[{ isOpen: boolean; toggle: () => void }]>;
         children?: Snippet<[{ close: () => void }]>;
         size?: 'sm' | 'md';
-        variant?: 'standard' | 'floating';
         fullWidth?: boolean;
         placement?: 'bottom-start' | 'bottom-end' | 'top-start' | 'top-end';
         shortcutScope?: string;
-        required?: boolean;
-        hideAsterisk?: boolean;
         disabled?: boolean;
         onChange?: (value: any) => void;
         onOpenChange?: (open: boolean) => void;
@@ -79,38 +68,23 @@ SPDX-License-Identifier: MIT OR Apache-2.0
         options = [],
         value = $bindable(null),
         multiple = false,
-        searchable = false,
         actions,
         trigger,
         children,
         size,
-        variant,
         fullWidth = false,
         placement = 'bottom-start',
         shortcutScope,
-        required,
-        hideAsterisk,
         disabled = false,
         onChange = () => {},
         onOpenChange = () => {},
         class: className = ''
     }: Props = $props();
 
-    const filterToolbar = getContext<FilterToolbarContext | undefined>(FILTER_TOOLBAR_CONTROL_SIZE);
-    const resolvedSize = $derived(filterToolbar?.controlSize ?? size ?? 'md');
-    const stackOnMobile = $derived(
-        !fullWidth && !trigger && (filterToolbar?.stackOnMobile ?? false)
-    );
+    const resolvedSize = $derived(size ?? 'md');
 
     let isOpen = $state(false);
-    let query = $state('');
     let anchor = $state<HTMLElement | null>(null);
-
-    const formCtx = getContext<FormFieldContext | undefined>('formField');
-    const isFloating = $derived((variant ?? formCtx?.variant) === 'floating');
-    const floatingLabel = $derived(formCtx?.label ?? '');
-    const isRequired = $derived(required ?? formCtx?.required ?? false);
-    const showAsterisk = $derived(isRequired && !(hideAsterisk ?? formCtx?.hideAsterisk ?? false));
 
     const selectedValues = $derived<DropdownValue[]>(multiple && Array.isArray(value) ? value : []);
     const hasValue = $derived(
@@ -139,11 +113,6 @@ SPDX-License-Identifier: MIT OR Apache-2.0
         : placeholder
     );
 
-    const visibleOptions = $derived.by(() => {
-        const q = query.trim().toLowerCase();
-        return q ? options.filter(o => o.label.toLowerCase().includes(q)) : options;
-    });
-
     const menuRole = $derived(
         actions ? 'menu'
         : children ? 'dialog'
@@ -151,7 +120,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
     );
     const triggerLabel = $derived(
         ariaLabel
-            ?? ([label || floatingLabel, displayLabel].filter(Boolean).join(': ') || placeholder)
+            ?? ([label, displayLabel].filter(Boolean).join(': ') || placeholder)
     );
 
     const rowPadding = $derived(resolvedSize === 'sm' ? 'px-2 py-1.5' : 'px-3 py-2');
@@ -160,7 +129,6 @@ SPDX-License-Identifier: MIT OR Apache-2.0
     function setOpen(next: boolean) {
         if (next === isOpen) return;
         isOpen = next;
-        if (next) query = '';
         onOpenChange(next);
     }
 
@@ -206,8 +174,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
     function focusInitial(surface: HTMLElement) {
         tick().then(() => {
             const target =
-                surface.querySelector<HTMLElement>('input[type="search"]')
-                ?? surface.querySelector<HTMLElement>('[aria-selected="true"]')
+                surface.querySelector<HTMLElement>('[aria-selected="true"]')
                 ?? items(surface)[0]
                 ?? surface;
             target.focus({ preventScroll: true });
@@ -227,15 +194,14 @@ SPDX-License-Identifier: MIT OR Apache-2.0
             close();
             return;
         }
-        const isTyping = event.target instanceof HTMLInputElement && event.target.type === 'search';
         const list = items(surface);
         if (!list.length) return;
         const index = list.indexOf(document.activeElement as HTMLElement);
         let next = -1;
         if (event.key === 'ArrowDown') next = index < 0 ? 0 : (index + 1) % list.length;
         else if (event.key === 'ArrowUp') next = index <= 0 ? list.length - 1 : index - 1;
-        else if (event.key === 'Home' && !isTyping) next = 0;
-        else if (event.key === 'End' && !isTyping) next = list.length - 1;
+        else if (event.key === 'Home') next = 0;
+        else if (event.key === 'End') next = list.length - 1;
         if (next < 0) return;
         event.preventDefault();
         list[next].focus({ preventScroll: true });
@@ -256,7 +222,6 @@ SPDX-License-Identifier: MIT OR Apache-2.0
         'relative min-w-0 text-left select-none',
         trigger ? 'inline-flex'
         : fullWidth ? 'flex w-full'
-        : stackOnMobile ? 'flex w-full sm:inline-flex sm:w-max sm:max-w-full'
         : 'inline-flex w-max max-w-full',
         className
     )}>
@@ -274,17 +239,11 @@ SPDX-License-Identifier: MIT OR Apache-2.0
             class={cn(
                 'inline-flex max-w-full min-w-0 cursor-pointer items-center justify-between gap-2 rounded-md glass-button text-xs font-medium focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50',
                 resolvedSize === 'sm' ? 'box-border h-8 px-2' : 'box-border h-9 px-3',
-                (fullWidth || stackOnMobile) && 'w-full',
-                stackOnMobile && 'sm:w-auto',
+                fullWidth && 'w-full',
                 !disabled && 'hover:text-fg-accent',
-                isOpen && 'border-accent/30 bg-surface text-fg-accent',
-                isFloating && 'h-12 pt-5 pb-1.5 text-sm leading-5'
+                isOpen && 'border-accent/30 bg-surface text-fg-accent'
             )}>
-            <span
-                class={cn(
-                    'grid min-w-0 grid-cols-1 grid-rows-1 items-center leading-none',
-                    isFloating && !hasValue && !isOpen && 'text-transparent'
-                )}>
+            <span class="grid min-w-0 grid-cols-1 grid-rows-1 items-center leading-none">
                 {#each options as option (option.value)}
                     {@render sizer(option.label)}
                 {/each}
@@ -305,30 +264,12 @@ SPDX-License-Identifier: MIT OR Apache-2.0
                 class={cn(
                     'inline-flex shrink-0 items-center justify-center transition-transform duration-200 ease-out',
                     slotSize,
-                    isOpen ? 'rotate-180 text-fg-accent' : 'text-fg-muted',
-                    isFloating && !hasValue && !isOpen && 'invisible'
+                    isOpen ? 'rotate-180 text-fg-accent' : 'text-fg-muted'
                 )}>
                 <ChevronDown class="size-3" />
             </span>
         </button>
 
-        {#if isFloating && floatingLabel}
-            <label
-                for={id}
-                class={cn(
-                    'pointer-events-none absolute left-3 z-10 font-medium transition-all duration-200 select-none',
-                    hasValue || isOpen ?
-                        'top-1.5 text-2xs leading-none font-semibold'
-                    :   'top-1/2 -translate-y-1/2 text-sm',
-                    isOpen ? 'text-fg-accent'
-                    : hasValue ? 'text-fg-muted'
-                    : 'text-fg-secondary/70'
-                )}>
-                <FieldLabelText
-                    text={floatingLabel}
-                    required={showAsterisk} />
-            </label>
-        {/if}
     {/if}
 </div>
 
@@ -355,7 +296,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
         {@attach shortcutScope ? fromAction(focusScope, () => shortcutScope as string) : undefined}
         role={menuRole}
         tabindex="-1"
-        aria-label={ariaLabel ?? (label || floatingLabel || placeholder)}
+        aria-label={ariaLabel ?? (label || placeholder)}
         aria-multiselectable={menuRole === 'listbox' && multiple ? true : undefined}
         onkeydown={handleMenuKeydown}
         class={cn(
@@ -386,18 +327,8 @@ SPDX-License-Identifier: MIT OR Apache-2.0
                 {/each}
             </div>
         {:else}
-            {#if searchable}
-                <div class="p-1.5 pb-1">
-                    <Input
-                        type="search"
-                        size="sm"
-                        placeholder="Search..."
-                        bind:value={query}
-                        aria-label="Search {label || 'options'}" />
-                </div>
-            {/if}
             <div class="flex max-h-64 flex-col overflow-y-auto">
-                {#each visibleOptions as option (option.value)}
+                {#each options as option (option.value)}
                     {@const selected = isSelected(option.value)}
                     <button
                         type="button"
