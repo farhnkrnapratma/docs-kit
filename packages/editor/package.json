@@ -1,6 +1,6 @@
 {
     "name": "@mdrs/editor",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "A Svelte editor for MDRS with syntax highlighting, language-server diagnostics, a formatting toolbar and a live preview.",
     "license": "MIT OR Apache-2.0",
     "author": "Farhan Kurnia Pratama",
