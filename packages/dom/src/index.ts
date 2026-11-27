@@ -5,6 +5,7 @@
 export { default as CodeTabs } from './CodeTabs.svelte';
 export { default as MarkdownChart } from './MarkdownChart.svelte';
 export { enhanceMarkdownContent } from './enhance';
+export { mermaidLanguage } from './mermaidHighlight';
 export {
     enhanceHeadingAnchors,
     resolveMdrsHash,
