@@ -29,7 +29,7 @@
         "@farhnkrnapratma/docs-ui": "workspace:^",
         "@farhnkrnapratma/pelers": "^1.0.0-alpha4",
         "@lucide/svelte": "^1.80.0",
-        "@mdrs/language-server": "^0.3.0",
+        "@mdrs/language-server": "^0.3.1",
         "d3-scale": "^4.0.3",
         "d3-shape": "^3.2.1",
         "highlight.js": "^11.12.0",

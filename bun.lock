@@ -30,7 +30,7 @@
         "@farhnkrnapratma/docs-ui": "workspace:^",
         "@farhnkrnapratma/pelers": "^1.0.0-alpha4",
         "@lucide/svelte": "^1.80.0",
-        "@mdrs/language-server": "^0.3.0",
+        "@mdrs/language-server": "^0.3.1",
         "d3-scale": "^4.0.3",
         "d3-shape": "^3.2.1",
         "highlight.js": "^11.12.0",
@@ -54,7 +54,7 @@
         "@farhnkrnapratma/docs-ui": "workspace:^",
         "@lucide/svelte": "^1.80.0",
         "@mdrs/dom": "workspace:^",
-        "@mdrs/language-server": "^0.3.0",
+        "@mdrs/language-server": "^0.3.1",
         "highlight.js": "^11.12.0",
         "katex": "^0.19.1",
       },
@@ -251,7 +251,7 @@
 
     "@mdrs/editor": ["@mdrs/editor@workspace:packages/editor"],
 
-    "@mdrs/language-server": ["@mdrs/language-server@0.3.0", "", { "dependencies": { "js-yaml": "^5.5.0", "vscode-languageserver": "^11.0.1", "vscode-languageserver-textdocument": "^1.0.16", "vscode-languageserver-types": "^3.18.6" }, "peerDependencies": { "highlight.js": "^11.12.0" }, "optionalPeers": ["highlight.js"], "bin": { "mdrs-language-server": "dist/cli.js" } }, "sha512-fFtUnyaofUyCo7fzA8iyyUoAuO3Oo6JLVMsYqO0tO2i+BFTD6L+OmfQGw6MUGWcKAqoFo0aXLDt/61sEV6M7BQ=="],
+    "@mdrs/language-server": ["@mdrs/language-server@0.3.1", "", { "dependencies": { "js-yaml": "^5.5.0", "vscode-languageserver": "^11.0.1", "vscode-languageserver-textdocument": "^1.0.16", "vscode-languageserver-types": "^3.18.6" }, "peerDependencies": { "highlight.js": "^11.12.0" }, "optionalPeers": ["highlight.js"], "bin": { "mdrs-language-server": "dist/cli.js" } }, "sha512-rTQFCnFKqjSdRzxTD54+NKYYWJwMDAtuVMAK0wRsN/udh+Z4rvNHhpYmqQLTmn42SkMx9+0QsyrdCfZ9ELnf3Q=="],
 
     "@mermaid-js/parser": ["@mermaid-js/parser@2.0.1", "", { "dependencies": { "@chevrotain/types": "~13.2.0" } }, "sha512-j37dj/h6p6pots1L7pLPPNuABEEu9WP4OYg9pW1g+nYG331j0+3canE9OagtYdytYvdSAMG+2fKU5cxep6LgjA=="],
 

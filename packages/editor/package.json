@@ -29,7 +29,7 @@
         "@farhnkrnapratma/docs-ui": "workspace:^",
         "@lucide/svelte": "^1.80.0",
         "@mdrs/dom": "workspace:^",
-        "@mdrs/language-server": "^0.3.0",
+        "@mdrs/language-server": "^0.3.1",
         "highlight.js": "^11.12.0",
         "katex": "^0.19.1"
     },
