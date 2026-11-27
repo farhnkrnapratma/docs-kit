@@ -1,6 +1,6 @@
 {
     "name": "@mdrs/dom",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "description": "Browser enhancements for MDRS HTML: highlighted code blocks, tabs, charts, Mermaid diagrams drawn by pelers, and heading anchors.",
     "license": "MIT OR Apache-2.0",
     "author": "Farhan Kurnia Pratama",
