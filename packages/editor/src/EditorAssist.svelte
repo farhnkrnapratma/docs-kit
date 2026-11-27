@@ -23,15 +23,16 @@ SPDX-License-Identifier: MIT OR Apache-2.0
     <div
         class="editor-assist absolute z-30 flex max-h-64 w-72 max-w-[calc(100%-1rem)] flex-col overflow-hidden rounded-md popover-surface font-sans text-xs"
         {style}>
-        <ul
+        <div
             id="{id}-list"
             role="listbox"
             aria-label="Suggestions"
-            class="overflow-y-auto py-1">
+            class="flex flex-col overflow-y-auto py-1">
             {#each suggestions as suggestion, index (index)}
-                <li
+                <div
                     id="{id}-{index}"
                     role="option"
+                    tabindex="-1"
                     aria-selected={index === selected}
                     onmousedown={event => {
                         event.preventDefault();
@@ -43,9 +44,9 @@ SPDX-License-Identifier: MIT OR Apache-2.0
                     )}>
                     <span class="truncate font-mono">{suggestion.label}</span>
                     <span class="shrink-0 truncate text-fg-muted">{suggestion.detail}</span>
-                </li>
+                </div>
             {/each}
-        </ul>
+        </div>
         {#if suggestions[selected]?.documentation}
             <p class="border-t border-line-subtle px-3 py-2 whitespace-pre-wrap text-fg-secondary">
                 {suggestions[selected].documentation}

@@ -146,7 +146,9 @@ describe('playground shell', () => {
         const columns = host.querySelector<HTMLElement>('.playground-columns')!;
         const value = () => Number(separator.getAttribute('aria-valuenow'));
         const key = (name: string) => {
-            separator.dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true }));
+            separator.dispatchEvent(
+                new KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true })
+            );
             flushSync();
         };
         return { host, separator, columns, value, key };
@@ -173,7 +175,9 @@ describe('playground shell', () => {
 
         ui.columns.getBoundingClientRect = () => ({ width: 1000 }) as DOMRect;
         const pointer = (type: string, init: PointerEventInit) =>
-            ui.separator.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, ...init }));
+            ui.separator.dispatchEvent(
+                new PointerEvent(type, { bubbles: true, cancelable: true, ...init })
+            );
         pointer('pointerdown', { button: 2, pointerId: 1, clientX: 500 });
         pointer('pointermove', { pointerId: 1, clientX: 600 });
         flushSync();
