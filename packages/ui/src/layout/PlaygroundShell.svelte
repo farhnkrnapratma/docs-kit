@@ -89,6 +89,19 @@ SPDX-License-Identifier: MIT OR Apache-2.0
         drag = undefined;
     }
 
+    function onTabKeydown(event: KeyboardEvent) {
+        const next: Record<string, 'source' | 'output'> = {
+            ArrowLeft: view === 'source' ? 'output' : 'source',
+            ArrowRight: view === 'source' ? 'output' : 'source',
+            Home: 'source',
+            End: 'output'
+        };
+        if (!(event.key in next)) return;
+        event.preventDefault();
+        view = next[event.key];
+        document.getElementById(`${id}-${view}-tab`)?.focus();
+    }
+
     const tab = (name: 'source' | 'output') =>
         cn(
             'flex-1 rounded-sm px-3 py-1 text-xs font-medium',
@@ -103,6 +116,8 @@ SPDX-License-Identifier: MIT OR Apache-2.0
     <div
         role="tablist"
         aria-label="Playground views"
+        tabindex="-1"
+        onkeydown={onTabKeydown}
         class="m-2 flex shrink-0 rounded-md border border-line-subtle p-0.5 md:hidden">
         <button
             type="button"
@@ -110,6 +125,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
             id="{id}-source-tab"
             aria-controls="{id}-source"
             aria-selected={view === 'source'}
+            tabindex={view === 'source' ? 0 : -1}
             class={tab('source')}
             onclick={() => (view = 'source')}>{sourceLabel}</button>
         <button
@@ -118,6 +134,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
             id="{id}-output-tab"
             aria-controls="{id}-output"
             aria-selected={view === 'output'}
+            tabindex={view === 'output' ? 0 : -1}
             class={tab('output')}
             onclick={() => (view = 'output')}>{outputLabel}</button>
     </div>
@@ -125,12 +142,13 @@ SPDX-License-Identifier: MIT OR Apache-2.0
         bind:this={columns}
         class="playground-columns flex min-h-0 flex-1 md:grid"
         style:grid-template-columns="minmax(180px, {split}fr) 6px minmax(180px, {1 - split}fr)">
-        <section
+        <div
             id="{id}-source"
-            aria-label={sourceLabel}
+            role="tabpanel"
+            aria-labelledby="{id}-source-tab"
             class={cn('min-h-0 min-w-0 flex-1 flex-col overflow-auto md:flex', view === 'source' ? 'flex' : 'hidden')}>
             {@render source()}
-        </section>
+        </div>
         <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
         <div
             role="separator"
@@ -140,6 +158,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
             aria-valuemin={20}
             aria-valuemax={80}
             aria-valuenow={Math.round(split * 100)}
+            aria-valuetext="{Math.round(split * 100)}% {sourceLabel}, {100 - Math.round(split * 100)}% {outputLabel}"
             class="hidden cursor-col-resize bg-line-subtle transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-none md:block"
             onkeydown={onKeydown}
             ondblclick={() => set(0.5)}
@@ -148,12 +167,13 @@ SPDX-License-Identifier: MIT OR Apache-2.0
             onpointerup={onPointerEnd}
             onpointercancel={onPointerEnd}>
         </div>
-        <section
+        <div
             id="{id}-output"
-            aria-label={outputLabel}
+            role="tabpanel"
+            aria-labelledby="{id}-output-tab"
             class={cn('min-h-0 min-w-0 flex-1 flex-col overflow-auto md:flex', view === 'output' ? 'flex' : 'hidden')}>
             {@render output()}
-        </section>
+        </div>
     </div>
     {#if status}
         <div

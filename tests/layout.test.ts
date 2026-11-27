@@ -205,7 +205,13 @@ describe('playground shell', () => {
     test('switches between source and output on small screens', () => {
         const ui = shell({ sourceLabel: 'Mermaid', outputLabel: 'SVG' });
         const [source, output] = ui.host.querySelectorAll<HTMLElement>('[role="tab"]');
-        const panel = (name: string) => ui.host.querySelector(`section[aria-label="${name}"]`)!;
+        const panel = (name: string) =>
+            [...ui.host.querySelectorAll('[role="tabpanel"]')].find(
+                section =>
+                    ui.host.querySelector(
+                        `#${CSS.escape(section.getAttribute('aria-labelledby')!)}`
+                    )?.textContent === name
+            )!;
         expect(source.getAttribute('aria-selected')).toBe('true');
         expect(panel('SVG').className).toContain('hidden');
         output.click();
@@ -215,6 +221,30 @@ describe('playground shell', () => {
         source.click();
         flushSync();
         expect(panel('SVG').className).toContain('hidden');
+        expect(source.tabIndex).toBe(0);
+        expect(output.tabIndex).toBe(-1);
+        const list = ui.host.querySelector('[role="tablist"]')!;
+        const press = (key: string) => {
+            list.dispatchEvent(
+                new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })
+            );
+            flushSync();
+        };
+        press('ArrowRight');
+        expect(output.getAttribute('aria-selected')).toBe('true');
+        expect(document.activeElement).toBe(output);
+        press('ArrowLeft');
+        expect(source.getAttribute('aria-selected')).toBe('true');
+        press('ArrowLeft');
+        expect(output.getAttribute('aria-selected')).toBe('true');
+        press('ArrowRight');
+        press('End');
+        expect(output.getAttribute('aria-selected')).toBe('true');
+        press('Home');
+        expect(source.getAttribute('aria-selected')).toBe('true');
+        press('x');
+        expect(source.getAttribute('aria-selected')).toBe('true');
+        expect(ui.separator.getAttribute('aria-valuetext')).toBe('50% Mermaid, 50% SVG');
         expect(ui.host.querySelector('[role="status"]')).toBeNull();
     });
 
