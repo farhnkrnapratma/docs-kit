@@ -23,7 +23,9 @@ bun add @mdrs/dom @farhnkrnapratma/docs-ui
 
     let { html } = $props();
     let article: HTMLElement;
-    $effect(() => enhanceMarkdownContent(article));
+    $effect(() => {
+        void enhanceMarkdownContent({ container: article });
+    });
 </script>
 
 <article bind:this={article}><MdrsHtml {html} /></article>
