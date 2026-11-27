@@ -769,6 +769,7 @@ export function enhanceCodeBlocks(
         pre.style.paddingBottom = '0.375rem';
         pre.style.flex = '1 1 0%';
 
+        pre.tabIndex = 0;
         codeBody.appendChild(pre);
 
         const syncGutterRowHeights = () => {

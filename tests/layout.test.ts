@@ -245,6 +245,8 @@ describe('playground shell', () => {
         press('x');
         expect(source.getAttribute('aria-selected')).toBe('true');
         expect(ui.separator.getAttribute('aria-valuetext')).toBe('50% Mermaid, 50% SVG');
+        expect(ui.host.querySelector('main#main [role="tablist"]')).not.toBeNull();
+        expect(ui.host.querySelector('header')).not.toBeNull();
         expect(ui.host.querySelector('[role="status"]')).toBeNull();
     });
 

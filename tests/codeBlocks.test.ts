@@ -491,6 +491,9 @@ describe('enhanceCodeBlocks', () => {
         expect(command.wrapper.querySelector('.mdrs-code-prompt')?.textContent).toBe('$');
         expect(script.wrapper.querySelector('.mdrs-code-prompt')).toBeNull();
         expect(single.wrapper.querySelectorAll('.mdrs-code-line').length).toBe(1);
+        expect(
+            (single.wrapper.querySelector('.mdrs-code-body > pre') as HTMLElement).tabIndex
+        ).toBe(0);
         expect(tabbed.wrapper.querySelector('.mdrs-code-badge')?.textContent).toBe('x.js · js');
         expect(tabbedPlain.wrapper.querySelector('.mdrs-code-badge')).toBeNull();
         expect(bare.wrapper.querySelector('.mdrs-code-gutter')).toBeNull();

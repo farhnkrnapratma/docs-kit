@@ -110,9 +110,12 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 </script>
 
 <div class={cn('playground-shell flex h-dvh flex-col bg-canvas text-fg', className)}>
-    <div class="flex min-h-12 shrink-0 items-center gap-3 border-b border-line-subtle px-3">
+    <header class="flex min-h-12 shrink-0 items-center gap-3 border-b border-line-subtle px-3">
         {@render header()}
-    </div>
+    </header>
+    <main
+        id="main"
+        class="flex min-h-0 flex-1 flex-col">
     <div
         role="tablist"
         aria-label="Playground views"
@@ -175,6 +178,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
             {@render output()}
         </div>
     </div>
+    </main>
     {#if status}
         <div
             role="status"
