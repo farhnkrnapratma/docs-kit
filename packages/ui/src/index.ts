@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
 export { default as Button } from './components/Button.svelte';
+export { default as Checkbox } from './components/Checkbox.svelte';
+export { default as FieldMessage } from './components/FieldMessage.svelte';
 export { default as Dropdown } from './components/Dropdown.svelte';
 export { default as IconButton } from './components/IconButton.svelte';
 export { default as LoadingIndicator } from './components/LoadingIndicator.svelte';

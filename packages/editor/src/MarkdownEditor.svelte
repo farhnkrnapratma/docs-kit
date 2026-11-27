@@ -1,0 +1,215 @@
+<!--
+SPDX-FileCopyrightText: 2026 Farhan Kurnia Pratama
+
+SPDX-License-Identifier: MIT OR Apache-2.0
+-->
+
+<script lang="ts">
+    import { onMount } from 'svelte';
+    import type { Attachment } from 'svelte/attachments';
+    import 'katex/dist/katex.min.css';
+    import './editor.css';
+    import { applyCodeThemeVariables, ensureHljsThemeStylesheet } from '@mdrs/dom/codeBlocks.ts';
+    import { cn } from '@farhnkrnapratma/docs-ui/utils/cn.ts';
+    import { themeStore } from '@farhnkrnapratma/docs-ui/stores/themeStore.svelte.ts';
+    import EditorViewBar from './EditorViewBar.svelte';
+    import EditorToolbar from './EditorToolbar.svelte';
+    import EditorCodeArea from './EditorCodeArea.svelte';
+    import EditorPreview from './EditorPreview.svelte';
+    import EditorStatusBar from './EditorStatusBar.svelte';
+    import EditorBlocksMenu from './EditorBlocksMenu.svelte';
+    import { EditorPreferences } from './preferences.svelte';
+    import { editorProblems, problemLines, type EditorProblem } from './problems';
+    import { outline as documentOutline, type OutlineEntry } from './language';
+
+    interface Props {
+        value?: string;
+        autosaveKey?: string;
+        placeholder?: string;
+        minHeight?: string;
+        stickyTopClass?: string;
+        stickyBottomClass?: string;
+        class?: string;
+        render: (markdown: string) => Promise<string> | string;
+        onblur?: () => void;
+        onImageUpload?: (file: File) => Promise<string | null>;
+        onVideoUpload?: (file: File) => Promise<string | null>;
+        onImport?: (file: File) => void;
+        importAccept?: string;
+    }
+
+    let {
+        value = $bindable(''),
+        autosaveKey = '',
+        placeholder = 'Write your markdown content here...',
+        minHeight = '400px',
+        stickyTopClass = 'top-0',
+        stickyBottomClass = 'bottom-0',
+        class: className = '',
+        render,
+        onblur,
+        onImageUpload,
+        onVideoUpload,
+        onImport,
+        importAccept
+    }: Props = $props();
+
+    const preferences = new EditorPreferences();
+    onMount(() => preferences.load());
+
+    let activeTab = $state<'editor' | 'preview'>('editor');
+    let previewHtml = $state('');
+    let previewError = $state('');
+    let cursor = $state({ line: 1, column: 1 });
+    let codeArea = $state<ReturnType<typeof EditorCodeArea> | null>(null);
+
+    const editorTheme = $derived<'light' | 'dark'>(themeStore.isDark ? 'dark' : 'light');
+    const lineEnding = $derived<'LF' | 'CRLF'>((value || '').includes('\r\n') ? 'CRLF' : 'LF');
+    let problems = $state<EditorProblem[]>([]);
+    let outline = $state<OutlineEntry[]>([]);
+    const linesWithProblems = $derived(problemLines(problems));
+
+    $effect(() => {
+        const content = value || '';
+        const timer = setTimeout(() => {
+            problems = editorProblems(content);
+            outline = documentOutline(content);
+        }, 300);
+        return () => clearTimeout(timer);
+    });
+
+    $effect(() => {
+        if (!preferences.ready || !preferences.autosaveEnabled || !autosaveKey || !value) return;
+        const content = value;
+        const timer = setTimeout(() => {
+            localStorage.setItem(autosaveKey, JSON.stringify({ content, timestamp: Date.now() }));
+        }, 500);
+        return () => clearTimeout(timer);
+    });
+
+    $effect(() => {
+        if (activeTab !== 'preview') return;
+        let active = true;
+        Promise.resolve()
+            .then(() => render(value || ''))
+            .then(html => {
+                if (!active) return;
+                previewHtml = html;
+                previewError = '';
+            })
+            .catch(error => {
+                if (!active) return;
+                previewHtml = '';
+                previewError =
+                    error instanceof Error ? error.message : 'Preview could not be rendered.';
+            });
+        return () => {
+            active = false;
+        };
+    });
+
+    const codeTheme: Attachment<HTMLSpanElement> = probe => {
+        const shell = probe.parentElement;
+        const theme = editorTheme;
+        let cancelled = false;
+        ensureHljsThemeStylesheet(theme).then(() => {
+            if (!cancelled && shell) applyCodeThemeVariables(shell, probe);
+        });
+        return () => {
+            cancelled = true;
+        };
+    };
+
+    export function insertMarkdown(prefix: string, suffix = '') {
+        codeArea?.insert(prefix, suffix);
+    }
+
+    function insertBlock(opening: string, closing = '') {
+        codeArea?.insertBlock(opening, closing);
+    }
+
+    function insertVerbatim() {
+        codeArea?.insertVerbatim();
+    }
+
+    function insertDefine() {
+        codeArea?.insertDefine();
+    }
+
+    function prefixLines(prefix: string) {
+        codeArea?.prefixLines(prefix);
+    }
+</script>
+
+<div
+    data-code-theme={editorTheme}
+    style:--editor-min-height={minHeight}
+    class={cn(
+        'editor-shell relative flex min-h-0 flex-col rounded-md border text-left shadow-xl',
+        className
+    )}>
+    <span
+        {@attach codeTheme}
+        class="editor-theme-probe hljs"
+        aria-hidden="true"></span>
+    <div class="editor-header sticky {stickyTopClass} z-30 flex flex-col rounded-t-md shadow-md">
+        <EditorViewBar
+            bind:activeTab
+            {preferences}
+            {importAccept}
+            {onImport}>
+            {#snippet blocks()}
+                <EditorBlocksMenu
+                    {insertBlock}
+                    {insertDefine}
+                    {insertVerbatim} />
+            {/snippet}
+        </EditorViewBar>
+        {#if activeTab === 'editor'}
+            <EditorToolbar
+                insert={insertMarkdown}
+                {prefixLines}
+                {insertBlock}
+
+                {onImageUpload}
+                {onVideoUpload} />
+        {/if}
+    </div>
+
+    <div
+        class="editor-surface flex-1 font-mono"
+        style:min-height={minHeight || undefined}>
+        {#if activeTab === 'editor'}
+            <EditorCodeArea
+                bind:this={codeArea}
+                bind:value
+                bind:cursor
+                problemLines={linesWithProblems}
+                {preferences}
+                theme={editorTheme}
+                {placeholder}
+                {minHeight}
+                {onblur} />
+        {:else}
+            <EditorPreview
+                html={previewHtml}
+                error={previewError}
+                {minHeight}
+                isDark={editorTheme === 'dark'} />
+        {/if}
+    </div>
+
+    {#if activeTab === 'editor'}
+        <EditorStatusBar
+            {preferences}
+            line={cursor.line}
+            column={cursor.column}
+            {lineEnding}
+            {problems}
+            stickyClass={stickyBottomClass}
+            showAutosave={Boolean(autosaveKey)}
+            onFocusEditor={() => codeArea?.focus()}
+            {outline}
+            onGoTo={position => codeArea?.goTo(position)} />
+    {/if}
+</div>

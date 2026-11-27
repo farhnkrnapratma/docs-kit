@@ -252,6 +252,16 @@ describe('shortcutStore chord groups', () => {
 });
 
 describe('shortcutStore edge cases', () => {
+    test('keeps page shortcuts working inside a non-modal scope', () => {
+        const target = button('page');
+        add({ combos: ['Shift+P'], label: 'page', scope: 'page', element: target.element });
+        shortcutStore.pushScope('panel');
+        leader();
+        press('KeyP', { shiftKey: true });
+        shortcutStore.popScope('panel');
+        expect(target.clicks()).toBe(1);
+    });
+
     test('orders two members on one element by registration and checks layout without checkVisibility', () => {
         const shared = document.createElement('button');
         document.body.append(shared);
